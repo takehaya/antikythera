@@ -21,54 +21,38 @@
 
 `timescale 1ns / 1ps
 
-module tb_alu;
-    // テストベンチ内部で使う信号を宣言
-    // ALUの入力は reg, 出力は wire として定義
-    reg  [7:0] A;
-    reg  [7:0] B;
-    reg  [3:0] ALU_Sel;
-    wire [7:0] ALU_Out;
-    wire       CarryOut;
+module tb_ALU;
+reg  [31:0] A, B;
+reg  [3:0]  ALUControl;
+wire [31:0] ALUResult;
+wire        Zero;
 
-    // テスト対象の ALU モジュールをインスタンス化
-    alu uut (
-        .A       (A),
-        .B       (B),
-        .ALU_Sel (ALU_Sel),
-        .ALU_Out (ALU_Out),
-        .CarryOut(CarryOut)
-    );
+ALU uut (
+    .A(A),
+    .B(B),
+    .ALUControl(ALUControl),
+    .ALUResult(ALUResult),
+    .Zero(Zero)
+);
 
-    // シミュレーションの進行を管理する initial ブロック
-    initial begin
-        // ヘッダ表示
-        $display("=== Start Simulation ===");
-        $display(" time |   A   |   B   | ALU_Sel | ALU_Out | CarryOut ");
+initial begin
+    $monitor($time, " ALUControl=%b, A=%d, B=%d, ALUResult=%d, Zero=%b",
+             ALUControl, A, B, ALUResult, Zero);
 
-        // 波形や値の変化をモニタする => 変化があるたびに自動で表示される（便利）
-        $monitor("%4dns | %2h | %2h |   %1h    |   %2h    |   %1b", 
-                 $time, A, B, ALU_Sel, ALU_Out, CarryOut);
+    // 1) AND
+    A=32'h0000_00FF; B=32'h0000_FF00; ALUControl=4'b0000; #10; // AND => 0x0000_0000
+    // 2) OR
+    ALUControl=4'b0001; #10; // => 0x0000_FFFF
+    // 3) ADD
+    A=32'd10; B=32'd5;   ALUControl=4'b0010; #10; // => 15
+    // 4) SUB
+    ALUControl=4'b0110; #10; // => 5
+    // 5) SLT
+    A=32'd3; B=32'd7; ALUControl=4'b0111; #10; // => 1 (3<7)
+    // 6) SUB => Zero?
+    A=32'd100; B=32'd100; ALUControl=4'b0110; #10; // => 0, Zero=1
 
-        // 初期値設定
-        A       = 8'h0A;  // 0x0A = 10
-        B       = 8'h02;  // 0x02 = 2
-        ALU_Sel = 4'h0;   // 0
-
-        // ALU_Sel を 0〜15 まで変化させて各演算をテスト
-        repeat (16) begin
-            #10;               // 10ns 待機
-            ALU_Sel = ALU_Sel + 1;  // opcodeを1ずつ増やす
-        end
-
-        // 追加テスト - 入力変更して再度チェック
-        #10;
-        A = 8'hF6;   // 0xF6
-        B = 8'h0A;   // 0x0A
-        ALU_Sel = 4'h0;
-        #10;
-
-        $display("=== End Simulation ===");
-        $finish;
-    end
+    #10;
+end
 
 endmodule
