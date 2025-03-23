@@ -1,0 +1,9 @@
+{
+	"version": "1.0",
+	"modules": {
+		"test_block_desgin": {
+			"proto_instances": {
+			}
+		}
+	}
+}
