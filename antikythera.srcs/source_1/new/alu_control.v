@@ -49,6 +49,7 @@ module ALUControl(
                     default:   ALUControl = 4'b0010; // とりあえずADD
                 endcase
             end
+            2'b11: ALUControl = 4'b0001; // ori → or (imm)
             default: ALUControl = 4'b0010; // 他 -> ADD
         endcase
     end

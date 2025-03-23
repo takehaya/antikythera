@@ -28,7 +28,13 @@ module Register(
     input  [4:0]  WriteReg,
     input  [31:0] WriteData,
     output [31:0] ReadData1,
-    output [31:0] ReadData2
+    output [31:0] ReadData2,
+
+    // レジスタ出力（観察用）
+    output [31:0] reg_t0,
+    output [31:0] reg_t1,
+    output [31:0] reg_t2,
+    output [31:0] reg_t3
 );
 
 reg [31:0] regs[31:0]; // 32本の32bitレジスタ
@@ -45,6 +51,11 @@ end
 assign ReadData1 = regs[ReadReg1];
 assign ReadData2 = regs[ReadReg2];
 
+// レジスタ出力（観察用）
+assign reg_t0 = regs[8];
+assign reg_t1 = regs[9];
+assign reg_t2 = regs[10];
+assign reg_t3 = regs[11];
 
 //シミュレーター用の初期化
 integer i;
