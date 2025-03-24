@@ -23,14 +23,14 @@ assign Instruction = InstrMem[instrAddr];
 
 // データメモリ読み書き
 wire [9:0] dataAddr = Address[11:2];  // 4バイト単位
-reg  [31:0] dataOut;
+wire [31:0] dataOut;
 
 always @(posedge clk) begin
     if(MemWrite) begin
         DataMem[dataAddr] <= WriteData;
     end
-    dataOut <= (MemRead) ? DataMem[dataAddr] : 32'h0;
 end
+assign dataOut = DataMem[dataAddr];
 
 assign ReadData = dataOut;
 

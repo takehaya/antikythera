@@ -1,8 +1,8 @@
 `timescale 1ns/1ps
 module tb_SingleCycleCPU();
 
-reg clk;
-reg reset;
+reg clk = 0;
+reg reset = 1;
 wire [31:0] t0, t1, t2, t3;
 
 SingleCycleCPU uut (
@@ -18,9 +18,7 @@ SingleCycleCPU uut (
 always #5 clk = ~clk;
 
 initial begin
-    clk = 0;
-    reset = 1;
-    #20;       // リセットを少し維持
+    #21;       // リセットを少し維持
     reset = 0; // CPUスタート
 
     // 500nsほど動かす

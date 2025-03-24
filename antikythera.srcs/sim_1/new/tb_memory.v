@@ -2,12 +2,12 @@
 
 module tb_Memory;
 
-reg         clk;
-reg  [31:0] PC;
+reg         clk = 1;
+reg  [31:0] PC = 0;
 wire [31:0] Instruction;
 
-reg         MemWrite, MemRead;
-reg  [31:0] Address, WriteData;
+reg         MemWrite=0, MemRead=0;
+reg  [31:0] Address=0, WriteData=0;
 wire [31:0] ReadData;
 
 Memory uut (
@@ -28,11 +28,8 @@ Memory uut (
 always #5 clk = ~clk;
 
 initial begin
-    clk = 0;
-    PC  = 0;
-    MemWrite=0; MemRead=0;
-    Address=0; WriteData=0;
     $display("InstrMem[0]=%h", uut.InstrMem[0]);
+    #2;
 
     // 命令メモリを読み出し (PC=0, PC=4, ...)
     // instactionの信号が切り替わるかが見える
