@@ -17,8 +17,12 @@ module SingleCycleCPU(
     wire [31:0] SignImm;
     wire [31:0] PCBranch = PCplus4 + (SignImm << 2);  // beq用(PC+4 + signExtImm<<2)
 
-    // 命令取得
+    // 命令メモリ
     wire [31:0] Instruction;
+    InstructionMemory imem (
+        .PC         (PC),
+        .Instruction(Instruction)
+    );
     
     // 命令各フィールド
     wire [5:0] opcode = Instruction[31:26];
@@ -97,15 +101,13 @@ module SingleCycleCPU(
 
     // データメモリ
     wire [31:0] memReadData;
-    Memory memory(
-        .clk(clk),
-        .PC(PC),
-        .Instruction(Instruction),
-        .MemWrite(MemWrite),
-        .MemRead(MemRead),
-        .Address(ALUResult),
+    DataMemory dmem (
+        .clk      (clk),
+        .MemWrite (MemWrite),
+        .MemRead  (MemRead),
+        .Address  (ALUResult),
         .WriteData(regData2),
-        .ReadData(memReadData)
+        .ReadData (memReadData)
     );
 
     // 書き込みデータのMUX
