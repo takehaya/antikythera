@@ -36,6 +36,9 @@ always @(*) begin
         4'b0010: ALUResult = A + B;    // ADD
         4'b0110: ALUResult = A - B;    // SUB
         4'b0111: ALUResult = (A < B) ? 32'd1 : 32'd0; // SLT
+        4'b0011: ALUResult = B; // LUI (imm<<16)
+        4'b0100: ALUResult = A ^ B;    // XOR (optional)
+        4'b0101: ALUResult = ~(A & B); // NAND (optional)
         4'b1100: ALUResult = ~(A | B); // NOR (optional)
         // 必要に応じて演算追加
         default: ALUResult = 32'h0;

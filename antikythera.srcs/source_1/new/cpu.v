@@ -14,8 +14,6 @@ module SingleCycleCPU(
 
     // 次PC計算用
     wire [31:0] PCplus4  = PC + 4;
-    wire [31:0] SignImm;
-    wire [31:0] PCBranch = PCplus4 + (SignImm << 2);  // beq用(PC+4 + signExtImm<<2)
 
     // 命令メモリ
     wire [31:0] Instruction;
@@ -36,8 +34,9 @@ module SingleCycleCPU(
     // 制御信号
     wire RegDst, ALUSrc, MemtoReg, RegWrite;
     wire MemRead, MemWrite, Branch, Jump;
-    wire [1:0] ALUOp;
-
+    wire [2:0] ALUOp; //3bit
+    
+    // 制御ユニット
     MainControl mainCtrl(
         .Op(opcode),
         .RegDst(RegDst),
@@ -73,11 +72,25 @@ module SingleCycleCPU(
         .reg_t3(reg_t3)
     );
 
-    // 符号拡張
-    SignExtender se(
-        .in(imm),
-        .out(SignImm)
-    );
+    // 即値拡張（Sign / Zero / LUI）
+    // SignExtender: 16bit immediate -> 32bit signed immediate
+    // ZeroExtender: 16bit immediate -> 32bit zero-extended immediate
+    // LuiExtender: 16bit immediate -> 32bit immediate << 16
+    wire [31:0] SignImm, ZeroImm, LuiImm;
+    SignExtender  se (.in(imm), .out(SignImm));
+    ZeroExtender  ze (.in(imm), .out(ZeroImm));
+    assign LuiImm = {imm, 16'h0000};
+    // opcode に応じて即値を選択
+    function automatic [31:0] select_imm;
+        input [5:0] op;
+        begin
+            case (op)
+                6'b001100, 6'b001101: select_imm = ZeroImm; // ANDI, ORI
+                6'b001111:            select_imm = LuiImm;  // LUI
+                default:              select_imm = SignImm; // ADDI, SLTI, etc.
+            endcase
+        end
+    endfunction
 
     // ALU制御 & ALU本体
     wire [3:0] ALUControl;
@@ -86,8 +99,12 @@ module SingleCycleCPU(
         .funct(funct),
         .ALUControl(ALUControl)
     );
+    
+    // ALUの入力2を選択するMUX
+    // ALUの入力2は、レジスタからの読み出しか即値かを選択
+    wire [31:0] ImmVal = select_imm(opcode);
 
-    wire [31:0] ALUInput2 = (ALUSrc) ? SignImm : regData2;
+    wire [31:0] ALUInput2 = (ALUSrc) ? ImmVal : regData2;
     wire [31:0] ALUResult;
     wire        Zero;
 
@@ -112,6 +129,9 @@ module SingleCycleCPU(
 
     // 書き込みデータのMUX
     assign WriteData = (MemtoReg) ? memReadData : ALUResult;
+
+    // beq/bne 系分岐が取られたときの遷移先
+    wire [31:0] PCBranch = PCplus4 + (SignImm << 2);
 
     // Branch判定
     wire PCSrc = Branch & Zero;
