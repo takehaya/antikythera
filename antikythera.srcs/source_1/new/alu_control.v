@@ -44,7 +44,7 @@ always @(*) begin
         3'b011: ALUControl = 4'b0000;       // ANDI
         3'b100: ALUControl = 4'b0001;       // ORI
         3'b101: ALUControl = 4'b0111;       // SLTI
-        3'b110: ALUControl = 4'b0011;       // LUI (→ ALUResult = imm<<16 とするなら 0003 を新設)
+        3'b110: ALUControl = 4'b0011;       // LUI
         default: ALUControl = 4'b0010;
     endcase
 end
