@@ -3,8 +3,13 @@
 _start:
     addi    $t0,$zero,5   # 20080005
     addi    $t1,$zero,10  # 2009000A
-    jal     sum           # 0C000004  (リンクは ld が解決)
+    jal     sum           # 0C000006 (リンクは ld が解決)
     add     $t3,$t2,$zero # 01405820
+
+# 停止可能にする
+spin:
+    beq $zero, $zero, spin
+    nop
 
 sum:
     add     $t2,$t0,$t1   # 01095020
