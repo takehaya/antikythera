@@ -1,6 +1,7 @@
 `timescale 1ns/1ps
 module MainControl(
     input  [5:0] Op,
+    input  [5:0] Funct,
     output reg       RegDst,
     output reg       ALUSrc,
     output reg       MemtoReg,
@@ -9,6 +10,8 @@ module MainControl(
     output reg       MemWrite,
     output reg       Branch,
     output reg       Jump,
+    output reg       JumpReg,
+    output reg       Link,
     output reg [2:0] ALUOp // 3bit
 );
 
@@ -23,6 +26,7 @@ module MainControl(
     localparam OPC_SW    = 6'b101011;
     localparam OPC_BEQ   = 6'b000100;
     localparam OPC_J     = 6'b000010;
+    localparam OPC_JAL   = 6'b000011;
 
     // ALUOp コード (3bit)
     localparam ALU_ADD = 3'b000;   // 加算・アドレス計算
@@ -32,6 +36,9 @@ module MainControl(
     localparam ALU_OR  = 3'b100;   // ori
     localparam ALU_SLT = 3'b101;   // slti
     localparam ALU_LUI = 3'b110;   // lui (imm<<16)
+
+    // R-type funct 定義
+    localparam FNC_JR = 6'b001000;
 
     always @(*) begin
         // デフォルトは NOP
@@ -43,14 +50,20 @@ module MainControl(
         MemWrite = 0;
         Branch   = 0;
         Jump     = 0;
+        JumpReg  = 0;
+        Link     = 0;
         ALUOp    = ALU_ADD;
 
         case (Op)
             // R‑type
             OPC_RTYPE: begin
-                RegDst   = 1;
-                RegWrite = 1;
-                ALUOp    = ALU_RTY;
+                if(Funct == FNC_JR) begin
+                    JumpReg  = 1;
+                end else begin
+                    RegDst   = 1;
+                    RegWrite = 1;
+                    ALUOp    = ALU_RTY;
+                end
             end
             // 即値演算
             OPC_ADDI: begin
@@ -98,6 +111,11 @@ module MainControl(
             end
             OPC_J: begin
                 Jump     = 1;
+            end
+            OPC_JAL: begin
+                Jump     = 1;
+                Link     = 1; // リンクレジスタに戻りアドレスを保存
+                RegWrite = 1; // リンクレジスタへの書き込み
             end
             // 既定 (NOP)
             default: ;   // すでに NOP をセット済み

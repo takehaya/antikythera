@@ -61,7 +61,7 @@
     <Option Name="IPStaticSourceDir" Val="$PIPUSERFILESDIR/ipstatic"/>
     <Option Name="EnableBDX" Val="FALSE"/>
     <Option Name="DSABoardId" Val="zybo"/>
-    <Option Name="WTXSimLaunchSim" Val="54"/>
+    <Option Name="WTXSimLaunchSim" Val="75"/>
     <Option Name="WTModelSimLaunchSim" Val="0"/>
     <Option Name="WTQuestaLaunchSim" Val="0"/>
     <Option Name="WTIesLaunchSim" Val="0"/>
@@ -148,38 +148,23 @@
           <Attr Name="UsedIn" Val="simulation"/>
         </FileInfo>
       </File>
-      <File Path="$PSRCDIR/sources_1/imports/new/memfile_I.dat">
+      <File Path="$PSRCDIR/source_1/new/zero_extender.v">
         <FileInfo>
-          <Attr Name="ImportPath" Val="$PSRCDIR/source_1/new/memfile_I.dat"/>
-          <Attr Name="ImportTime" Val="1741252130"/>
-          <Attr Name="UsedIn" Val="synthesis"/>
-          <Attr Name="UsedIn" Val="simulation"/>
-        </FileInfo>
-      </File>
-      <File Path="$PSRCDIR/sources_1/imports/new/instaction_memory.v">
-        <FileInfo>
-          <Attr Name="ImportPath" Val="$PSRCDIR/source_1/new/instaction_memory.v"/>
-          <Attr Name="ImportTime" Val="1744944706"/>
           <Attr Name="UsedIn" Val="synthesis"/>
           <Attr Name="UsedIn" Val="implementation"/>
           <Attr Name="UsedIn" Val="simulation"/>
         </FileInfo>
       </File>
-      <File Path="$PSRCDIR/sources_1/imports/new/data_memory.v">
+      <File Path="$PSRCDIR/source_1/new/data_memory.v">
         <FileInfo>
-          <Attr Name="ImportPath" Val="$PSRCDIR/source_1/new/data_memory.v"/>
-          <Attr Name="ImportTime" Val="1744944767"/>
           <Attr Name="UsedIn" Val="synthesis"/>
           <Attr Name="UsedIn" Val="implementation"/>
           <Attr Name="UsedIn" Val="simulation"/>
         </FileInfo>
       </File>
-      <File Path="$PSRCDIR/sources_1/imports/new/zero_extender.v">
+      <File Path="$PSRCDIR/source_1/new/memfile_I.dat">
         <FileInfo>
-          <Attr Name="ImportPath" Val="$PSRCDIR/source_1/new/zero_extender.v"/>
-          <Attr Name="ImportTime" Val="1744965075"/>
           <Attr Name="UsedIn" Val="synthesis"/>
-          <Attr Name="UsedIn" Val="implementation"/>
           <Attr Name="UsedIn" Val="simulation"/>
         </FileInfo>
       </File>
