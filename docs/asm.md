@@ -39,3 +39,16 @@ $ cat memfile_I.dat
 00000000
 00000000
 ```
+
+## アセンブラの書き方メモ
+- https://brain.cc.kogakuin.ac.jp/~kanamaru/lecture/MP/final/part04/node6.html
+- https://www.swlab.cs.okayama-u.ac.jp/~nom/lect/p3/what-is-calling-convention.html
+
+- b命令
+```s
+# b label
+beq   $zero, $zero, ラベル 
+nop
+```
+
+アセンブラの擬似命令で、ISAにはない。ジャンプ（厳密には条件付きjumpに0を入れて常に飛ばす感じ）です。j命令でもできる。
