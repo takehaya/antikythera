@@ -8,7 +8,8 @@ module MainControl(
     output reg       RegWrite,
     output reg       MemRead,
     output reg       MemWrite,
-    output reg       Branch,
+    output reg       Branch, // BEQ 用の制御信号 (Zero == 1 で取りたい)
+    output reg       BranchNot, // BNE 用の制御信号 (Zero == 0 で取りたい)
     output reg       Jump,
     output reg       JumpReg,
     output reg       Link,
@@ -25,8 +26,10 @@ module MainControl(
     localparam OPC_LW    = 6'b100011;
     localparam OPC_SW    = 6'b101011;
     localparam OPC_BEQ   = 6'b000100;
+    localparam OPC_BNE   = 6'b000101; 
     localparam OPC_J     = 6'b000010;
     localparam OPC_JAL   = 6'b000011;
+    localparam OPC_ADDIU = 6'b001001;
 
     // ALUOp コード (3bit)
     localparam ALU_ADD = 3'b000;   // 加算・アドレス計算
@@ -42,17 +45,18 @@ module MainControl(
 
     always @(*) begin
         // デフォルトは NOP
-        RegDst   = 0;
-        ALUSrc   = 0;
-        MemtoReg = 0;
-        RegWrite = 0;
-        MemRead  = 0;
-        MemWrite = 0;
-        Branch   = 0;
-        Jump     = 0;
-        JumpReg  = 0;
-        Link     = 0;
-        ALUOp    = ALU_ADD;
+        RegDst    = 0;
+        ALUSrc    = 0;
+        MemtoReg  = 0;
+        RegWrite  = 0;
+        MemRead   = 0;
+        MemWrite  = 0;
+        Branch    = 0;
+        BranchNot = 0;
+        Jump      = 0;
+        JumpReg   = 0;
+        Link      = 0;
+        ALUOp     = ALU_ADD;
 
         case (Op)
             // R‑type
@@ -66,6 +70,7 @@ module MainControl(
                 end
             end
             // 即値演算
+            OPC_ADDIU,
             OPC_ADDI: begin
                 ALUSrc   = 1;
                 RegWrite = 1;
@@ -108,6 +113,10 @@ module MainControl(
             OPC_BEQ: begin
                 Branch   = 1;
                 ALUOp    = ALU_SUB;
+            end
+            OPC_BNE: begin
+                BranchNot = 1;
+                ALUOp     = ALU_SUB; 
             end
             OPC_J: begin
                 Jump     = 1;

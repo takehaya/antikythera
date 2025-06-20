@@ -30,11 +30,16 @@ module SingleCycleCPU(
     wire [5:0] funct  = Instruction[5:0];
     wire [15:0] imm   = Instruction[15:0];
     wire [25:0] jumpAddr = Instruction[25:0];
-
+    
+    // shiftのための変数
+    wire [4:0] shamt = Instruction[10:6];
+    wire       funct_bit2 = Instruction[2]; 
+    
     // 制御信号
     wire RegDst, ALUSrc, MemtoReg, RegWrite;
-    wire MemRead, MemWrite, Branch, Jump;
-    wire JumpReg, Link;          // ★ 追加
+    wire MemRead, MemWrite;
+    wire Branch, BranchNot;
+    wire Jump, JumpReg, Link;
     wire [2:0] ALUOp; //3bit
     
     // 制御ユニット
@@ -48,6 +53,7 @@ module SingleCycleCPU(
         .MemRead(MemRead),
         .MemWrite(MemWrite),
         .Branch(Branch),
+        .BranchNot (BranchNot),
         .Jump(Jump),
         .JumpReg(JumpReg),
         .Link (Link),
@@ -109,14 +115,16 @@ module SingleCycleCPU(
 
     wire [31:0] ALUInput2 = (ALUSrc) ? ImmVal : regData2;
     wire [31:0] ALUResult;
-    wire        Zero;
+    wire        ZeroFlag;
 
     ALU alu(
         .A(regData1),
         .B(ALUInput2),
+        .shamt(shamt),
+        .funct_bit2 (funct_bit2),
         .ALUControl(ALUControl),
         .ALUResult(ALUResult),
-        .Zero(Zero)
+        .Zero(ZeroFlag)
     );
 
     // データメモリ
@@ -139,15 +147,18 @@ module SingleCycleCPU(
     wire [31:0] PCBranch = PCplus4 + (SignImm << 2);
 
     // Branch判定
-    wire PCSrc = Branch & Zero;
+    wire takeBranch =
+           (Branch     &&  ZeroFlag) ||   // beq
+           (BranchNot  && !ZeroFlag);     // bne
+
     // Jumpアドレス生成: {PCplus4[31:28], jumpAddr, 2'b00}
     wire [31:0] jumpTarget = { PCplus4[31:28], jumpAddr, 2'b00 };
 
     // 次PC選択
     wire [31:0] PCnext = JumpReg ? regData1 :
                          Jump    ? jumpTarget :
-                         PCSrc   ? PCBranch   :
-                                   PCplus4;
+                         takeBranch ? PCBranch :
+                                      PCplus4;
 
     // PC更新
     always @(posedge clk or posedge reset) begin

@@ -50,8 +50,10 @@ end
 // 非同期読み出し
 // assign ReadData1 = regs[ReadReg1];
 // assign ReadData2 = regs[ReadReg2];
-assign ReadData1 = (RegWrite && (WriteReg == ReadReg1) && (WriteReg != 0)) ? WriteData : regs[ReadReg1];
-assign ReadData2 = (RegWrite && (WriteReg == ReadReg2) && (WriteReg != 0)) ? WriteData : regs[ReadReg2];
+//assign ReadData1 = (RegWrite && (WriteReg == ReadReg1) && (WriteReg != 0)) ? WriteData : regs[ReadReg1];
+//assign ReadData2 = (RegWrite && (WriteReg == ReadReg2) && (WriteReg != 0)) ? WriteData : regs[ReadReg2];
+assign ReadData1 = regs[ReadReg1];
+assign ReadData2 = regs[ReadReg2];
 
 // レジスタ出力（観察用）
 assign reg_t0 = regs[8];
