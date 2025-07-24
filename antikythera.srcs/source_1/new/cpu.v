@@ -138,9 +138,18 @@ module SingleCycleCPU(
         .ReadData (memReadData)
     );
 
+    // 統合メモリアクセス: lw命令で命令メモリもアクセス可能にする
+    wire [31:0] instructionMemData;
+    wire [9:0] imemWordAddr = ALUResult[11:2]; // 4byte aligned
+    assign instructionMemData = imem.mem[imemWordAddr];
+    
+    // アドレス範囲による判定（0x0000-0x0FFF: 命令メモリ, 0x1000以上: データメモリ）
+    wire accessInstructionMem = (ALUResult < 32'h1000);
+    wire [31:0] unifiedMemReadData = accessInstructionMem ? instructionMemData : memReadData;
+
     // 書き込みデータのMUX
     assign WriteData = Link ? PCplus4 :
-                       MemtoReg ? memReadData :
+                       MemtoReg ? unifiedMemReadData :
                                    ALUResult;
 
     // beq/bne 系分岐が取られたときの遷移先

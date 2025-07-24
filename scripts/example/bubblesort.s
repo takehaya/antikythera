@@ -1,29 +1,78 @@
 .globl  _start
 .set    noreorder
 
-# dataセクション
-.data
-arr:
-    .word 7,1,4,9,3,8,2,6,5,0
-arr_end: 
+# メモリマップ定数
+.equ DATA_HEAP_BASE,    0x1100  # データメモリのヒープ開始（0x1000以上）
+.equ DATA_TEMP_BASE,    0x1200  # 一時変数領域
+.equ STACK_BASE,        0x10FF  # スタック開始位置
 
 # 命令セクション
 .text
 _start: # main()
-    # $a0 = base
-    la      $a0, arr
-
-    # $a1 = 要素数 = (arr_end - arr) / 4
-    la      $t0, arr_end
-    subu    $t0, $t0, $a0      # バイト長
-    srl     $a1, $t0, 2        # len = bytesize/4 → 要素数
-
-    jal     bsort
+    # スタックポインタ初期化
+    addi $sp, $zero, STACK_BASE
+    
+    # 配列をデータメモリにコピー
+    jal copy_array_to_data_mem
+    nop
+    
+    # ソート実行（データメモリの配列を使用）
+    addi $a0, $zero, DATA_HEAP_BASE  # データメモリのベースアドレス
+    move $a1, $v0                    # 要素数（copy関数から返される）
+    jal  bsort
+    nop
+    
+    # ソート結果を観察用レジスタに格納
+    jal load_result_to_debug_regs
     nop
 
 spin: # 停止用ループ
     b       spin
     nop
+
+copy_array_to_data_mem:
+    # 命令メモリ内の配列データを取得
+    la   $t0, array_data
+    la   $t2, array_end
+    subu $t2, $t2, $t0        # 配列全体のバイト数
+    srl  $t2, $t2, 2          # 要素数
+
+    # $v0に要素数を返す（後でbsortで使用）
+    move $v0, $t2
+
+    # データメモリのヒープ領域に配列をコピー
+    addi $t1, $zero, DATA_HEAP_BASE
+
+copy_loop:
+    beq  $t2, $zero, copy_done
+    nop
+    lw   $t3, 0($t0)
+    sw   $t3, 0($t1)
+    addi $t0, $t0, 4
+    addi $t1, $t1, 4
+    addi $t2, $t2, -1
+    b    copy_loop
+    nop
+
+copy_done:
+    jr   $ra
+    nop
+
+# 結果をデバッグレジスタに読み込む関数
+load_result_to_debug_regs:
+    # ソート済み配列の最初の4要素をデバッグレジスタ$t0-$t3に格納
+    addi $t4, $zero, DATA_HEAP_BASE  # $t4 = 0x1100
+    lw   $t0, 0($t4)          # 1番目の要素
+    lw   $t1, 4($t4)          # 2番目の要素
+    lw   $t2, 8($t4)          # 3番目の要素
+    lw   $t3, 12($t4)         # 4番目の要素
+    jr   $ra
+    nop
+
+# 配列データ（命令メモリの安全な位置に配置）
+array_data:
+    .word 7,1,4,9,3,8,2,6,5,0
+array_end:
 
 # void bsort(int *base, int n)
 # レジスタ割当:

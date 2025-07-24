@@ -7,10 +7,10 @@ module DataMemory(
     input  [31:0] WriteData,
     output [31:0] ReadData
 );
-    // 1024 ワード（4KB）メモリ
-    reg [31:0] mem [0:1023];
+    // 2048 ワード（8KB）メモリ（0x1100番地までアクセス可能にするため）
+    reg [31:0] mem [0:2047];
     // ワードアドレス（32bit アドレスの 4 バイト境界アライン版）
-    wire [9:0] wordAddr = Address[11:2];
+    wire [10:0] wordAddr = Address[12:2];
 
     // 書き込み処理処理
     always @(posedge clk) begin
@@ -22,7 +22,7 @@ module DataMemory(
 
     integer i;
     initial begin
-        for (i=0; i<1024; i=i+1) mem[i] = 32'h0;
+        for (i=0; i<2048; i=i+1) mem[i] = 32'h0;
     end
 
     // メモリの値を取得する関数
