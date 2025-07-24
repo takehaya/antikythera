@@ -1,5 +1,8 @@
 `timescale 1ns / 1ps
 
+// Memory boundary definition
+`define INST_MEM_BOUNDARY 32'h1000  // Instruction memory: 0x0000-0x0FFF, Data memory: 0x1000+
+
 module SingleCycleCPU(
     input clk,
     input reset,
@@ -144,7 +147,7 @@ module SingleCycleCPU(
     assign instructionMemData = imem.mem[imemWordAddr];
     
     // アドレス範囲による判定（0x0000-0x0FFF: 命令メモリ, 0x1000以上: データメモリ）
-    wire accessInstructionMem = (ALUResult < 32'h1000);
+    wire accessInstructionMem = (ALUResult < `INST_MEM_BOUNDARY);
     wire [31:0] unifiedMemReadData = accessInstructionMem ? instructionMemData : memReadData;
 
     // 書き込みデータのMUX

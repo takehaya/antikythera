@@ -1,4 +1,8 @@
 `timescale 1ns/1ps
+
+// Memory configuration
+`define MEM_SIZE 2048  // Memory size in words (8KB)
+
 module DataMemory(
     input         clk,
     input         MemWrite,
@@ -7,8 +11,8 @@ module DataMemory(
     input  [31:0] WriteData,
     output [31:0] ReadData
 );
-    // 2048 ワード（8KB）メモリ（0x1100番地までアクセス可能にするため）
-    reg [31:0] mem [0:2047];
+    // メモリ配列（0x1100番地までアクセス可能にするため）
+    reg [31:0] mem [0:`MEM_SIZE-1];
     // ワードアドレス（32bit アドレスの 4 バイト境界アライン版）
     wire [10:0] wordAddr = Address[12:2];
 
@@ -22,7 +26,7 @@ module DataMemory(
 
     integer i;
     initial begin
-        for (i=0; i<2048; i=i+1) mem[i] = 32'h0;
+        for (i=0; i<`MEM_SIZE; i=i+1) mem[i] = 32'h0;
     end
 
     // メモリの値を取得する関数
