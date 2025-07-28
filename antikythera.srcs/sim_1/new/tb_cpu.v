@@ -57,29 +57,12 @@ initial begin
     #21;       // リセットを少し維持
     reset = 0; // CPUスタート
     
-    $display("=== バブルソートシミュレーション開始 ===");
-    
     // 命令メモリの初期化状態を確認
     $display("\n=== 命令メモリ初期化確認 ===");
     $display("PC=0の命令: 0x%h", uut.imem.mem[0]);
     $display("PC=4の命令: 0x%h", uut.imem.mem[1]);
     $display("PC=8の命令: 0x%h", uut.imem.mem[2]);
     
-    // 新しいbubblesort.sの命令パターンかチェック
-    if (uut.imem.mem[0] == 32'h201d00ff && uut.imem.mem[1] == 32'h0c00000b) begin
-        $display("✓ 新しいbubblesort.sが正しく読み込まれています");
-    end else begin
-        $display("✗ 古いメモリファイルが使用されている可能性があります");
-    end
-    
-    if (uut.imem.mem[0] === 32'hxxxxxxxx) begin
-        $display("ERROR: 命令メモリが初期化されていません！");
-        $display("memfile_I.datの読み込みに失敗している可能性があります。");
-    end else begin
-        $display("OK: 命令メモリは正常に初期化されています。");
-    end
-    
-    // 段階的な観察
     #200;
     display_array_status("200ns後");
     
@@ -120,7 +103,7 @@ initial begin
     $display("期待値: 0 1 2 3 4 5 6 7 8 9");
     $write("実際値: ");
     for (i = 1088; i < 1098; i = i + 1) begin
-        $write("%d ", uut.dmem.mem[i]);
+        $write("%d", uut.dmem.mem[i]);
     end
     $display("");
     
