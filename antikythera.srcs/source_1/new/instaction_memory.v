@@ -1,5 +1,7 @@
 `timescale 1ns/1ps
-module InstructionMemory(
+module InstructionMemory #(
+    parameter MEM_FILE = "memfile_I.dat"  // デフォルトファイル名
+)(
     input  [31:0] PC,
     output [31:0] Instruction
 );
@@ -13,17 +15,17 @@ module InstructionMemory(
             mem[i] = 32'h00000000;
         end
         
-        // メモリファイルから読み込み（失敗時は手動初期化）
-        $readmemh("memfile_I.dat", mem);
+        // パラメータ指定されたメモリファイルから読み込み
+        $readmemh(MEM_FILE, mem);
         
         // 読み込み確認とフォールバック
         if (mem[0] === 32'hxxxxxxxx) begin
-            $display("WARNING: memfile_I.dat読み込み失敗。手動初期化を実行します。");
+            $display("WARNING: %s読み込み失敗。手動初期化を実行します。", MEM_FILE);
             // 簡単なテストプログラム（無限ループ）
             mem[0] = 32'h08000000;  // j 0 (無限ループ)
             mem[1] = 32'h00000000;  // nop
         end else begin
-            $display("INFO: memfile_I.dat正常に読み込まれました。");
+            $display("INFO: %s正常に読み込まれました。", MEM_FILE);
         end
     end
 endmodule
