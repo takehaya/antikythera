@@ -8,7 +8,7 @@ module InstructionMemory #(
     reg [31:0] mem [0:1023];
     wire [9:0] wordAddr = PC[11:2]; // 4byte aligned
     assign Instruction = mem[wordAddr];
-    initial begin
+    initial begin: initdata
         // まず全体を0で初期化
         integer i;
         for (i = 0; i < 1024; i = i + 1) begin

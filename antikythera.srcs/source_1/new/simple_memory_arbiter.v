@@ -66,7 +66,7 @@ module SimpleMemoryArbiter #(
     
     // ストールロジック：リクエストはあるが許可されない場合にストール
     assign core0_stall = 1'b0;  // コア0は決してストールしない（優先権あり）
-    assign core1_stall = (core1_dmem_req && !core1_dmem_grant);  // データメモリ競合時のみストール
+    assign core1_stall = (core1_dmem_req && !core1_dmem_grant)? 1'b1: 1'b0;  // データメモリ競合時のみストール
     
     // メモリインタフェースの多重化
     wire dmem_write_granted = (core0_dmem_grant && core0_dmem_write) || 

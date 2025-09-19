@@ -56,8 +56,8 @@ module SimpleCPUWithMemInterface(
     wire RegDst, ALUSrc, MemtoReg, RegWrite;
     wire MemRead, MemWrite;
     
-    // ストール制御用の中間信号
-    wire RegWriteGated = RegWrite && !stall;
+    // ストール制御用の中間信号（ストール信号が不定の場合は書き込み許可）
+    wire RegWriteGated = RegWrite && (!stall || stall === 1'bx);
     wire Branch, BranchNot;
     wire Jump, JumpReg, Link;
     wire [2:0] ALUOp; //3bit
@@ -185,10 +185,10 @@ module SimpleCPUWithMemInterface(
                                       PCplus4;
 
     // PC更新（ストール時は更新しない）
-    always @(posedge clk or posedge reset) begin
+    always @(posedge clk) begin
         if(reset) 
             PC <= 0;
-        else if (!stall)  // ストール中でない場合のみPC更新
+        else if (!stall || stall === 1'bx)  // ストール信号が不定の場合も更新
             PC <= PCnext;
         // ストール中はPCを維持
     end

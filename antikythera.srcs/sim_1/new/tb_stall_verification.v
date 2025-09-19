@@ -25,7 +25,6 @@ module tb_StallVerification;
     reg stall_test_passed;
     reg pc_advance_test_passed;
 
-    // テスト設定（使用するメモリファイルを指定）
     parameter TEST_PROGRAM = "simple_stall_test.dat";  // ストール検証用テストプログラム
     
     // テスト対象
