@@ -1,0 +1,49 @@
+ 90  merge_loop:
+ 91      beq    $t0, $t1, merge_drain_right     # 0104: 11090013
+ 92      beq    $t2, $t3, merge_drain_left      # 0108: 114b000c
+ 93      lw     $t5, 0($t0)                     # 010c: 8d0d0000
+ 94      lw     $t6, 0($t2)                     # 0110: 8d4e0000
+ 95      slt    $t7, $t6, $t5                   # 0114: 01cd782a
+ 96      bne    $t7, $zero, merge_take_right    # 0118: 15e00004
+ 97      sw     $t5, 0($t4)                     # 011c: ad8d0000
+ 98      addiu  $t0, $t0, 4                     # 0120: 25080004
+ 99      addiu  $t4, $t4, 4                     # 0124: 258c0004
+100      j      merge_loop                      # 0128: 08000041
+101  merge_take_right:
+102      sw     $t6, 0($t4)                     # 012c: ad8e0000
+103      addiu  $t2, $t2, 4                     # 0130: 254a0004
+104      addiu  $t4, $t4, 4                     # 0134: 258c0004
+105      j      merge_loop                      # 0138: 08000041
+106  merge_drain_left:
+107      beq    $t0, $t1, merge_copy_back       # 013c: 1109000b
+108      lw     $t5, 0($t0)                     # 0140: 8d0d0000
+109      sw     $t5, 0($t4)                     # 0144: ad8d0000
+110      addiu  $t0, $t0, 4                     # 0148: 25080004
+111      addiu  $t4, $t4, 4                     # 014c: 258c0004
+112      j      merge_drain_left                # 0150: 0800004f
+113  merge_drain_right:
+114      beq    $t2, $t3, merge_copy_back       # 0154: 114b0005
+115      lw     $t6, 0($t2)                     # 0158: 8d4e0000
+116      sw     $t6, 0($t4)                     # 015c: ad8e0000
+117      addiu  $t2, $t2, 4                     # 0160: 254a0004
+118      addiu  $t4, $t4, 4                     # 0164: 258c0004
+119      j      merge_drain_right               # 0168: 08000055
+120  merge_copy_back:
+121      addiu  $a0, $zero, 4864                # 016c: 24041300
+122      addiu  $a1, $zero, 4352                # 0170: 24051100
+123      addiu  $a2, $zero, 10                  # 0174: 2406000a
+124      j      copy_words                      # 0178: 08000022
+125  
+126  # Fixed read-only input data in the same ROM image.
+127  .org 0x0800
+128  input_values:
+129      .word 0x00000007                       # 0800
+130      .word 0x00000001                       # 0804
+131      .word 0x00000004                       # 0808
+132      .word 0x00000009                       # 080c
+133      .word 0x00000003                       # 0810
+134      .word 0x00000008                       # 0814
+135      .word 0x00000002                       # 0818
+136      .word 0x00000006                       # 081c
+137      .word 0x00000005                       # 0820
+138      .word 0x00000000                       # 0824

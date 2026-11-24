@@ -1,0 +1,13 @@
+{
+  "matrix_conditions": 54,
+  "case_groups": 18,
+  "lengths": 11,
+  "demos": 6,
+  "unit_checks": 4,
+  "negative_expected_exit": 1,
+  "original_files_checked": 80,
+  "integrated_source_files_checked": 19,
+  "all_csv_numeric_fields_match_saved_logs": true,
+  "protected_old_reports_and_teacher_brief_unchanged": true,
+  "source_snapshot_sha256": "62eb51779b0c017309f85ba769c79c18a91c8dbf31c9e61bee0fece0700b8e6d"
+}

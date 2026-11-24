@@ -1,0 +1,61 @@
+\chapter{目的と検証対象}\label{chap:1}
+
+配列の前半をCore0、後半をCore1がバブルソートし、両側が終わったらCore0がマージする。
+配列は共有RAMに置くため、両コアの要求が重なったときは一方を待たせる。Core0は左右のソートがともに終わるまでマージを待つ。
+
+
+
+\section{検証の目的}\label{sec:1-1}
+
+出力の一致だけでは、両コアが意図どおりに分担したかは分からない。
+Core1がREADYより前に書き込まないこと、各コアが担当区間だけに書き込んで自分の完了を通知すること、両側の完了後にマージすることを調べる。競合によるストール中は、PCとレジスタが変わらないことも確かめる。
+
+
+
+サイクル数の比較では、同じ分割ソートとマージを1コアで順に行う方式を基準とする。
+同期と待機を含む総サイクル数を数え、どの区間で差がついたかも調べる。
+
+
+
+\section{既存実装と今回の実施範囲}\label{sec:1-2}
+
+独立した命令フェッチ、Core0優先の調停、ストール中の状態保持は既存CPUから引き継いだ。
+今回、調停器に入力ROMの読出し経路を設け、ROM宛ての書込みがRAMに届かないようにした。CPU側では、従来の0x3000に加え、0x1FFCからもコアIDを読めるようにした。
+この検証版に既存のソート生成器とテストベンチを組み合わせた（表\ref{tab:1}）。
+
+
+
+\begin{table}[H]
+
+\centering
+
+\caption{既存の実装と今回の統合、検証の範囲}
+
+\label{tab:1}
+
+\footnotesize
+
+\setlength{\tabcolsep}{3pt}
+
+\renewcommand{\arraystretch}{1.25}
+
+\begin{tabular}{>{\raggedright\arraybackslash}p{\dimexpr0.132192\linewidth-2\tabcolsep\relax}>{\raggedright\arraybackslash}p{\dimexpr0.430624\linewidth-2\tabcolsep\relax}>{\raggedright\arraybackslash}p{\dimexpr0.437185\linewidth-2\tabcolsep\relax}}\toprule
+
+\textbf{区分} & \textbf{内容} & \textbf{今回の扱い}\\\midrule
+
+既存 & 独立した命令フェッチ、Core0優先の調停、ストール時のPCとレジスタ保持 & 機構を維持し、ソート実行中の動作を確認\\
+
+既存 & CPU、ソート生成器、テストベンチ & これまでのソート生成器と検証コードを現行CPUに組み合わせる\\
+
+統合 & ROMのデータ読出し、ROM宛て書込みの抑止、coreIDの0x1FFC別名 & CPUと調停器の2ファイルを変更\\
+
+検証 & 54条件の比較、6件の波形デモ、4件の追加検証、期待値不一致の負例 & 既存ログと波形を本報告の根拠として対応付け\\
+
+\bottomrule\end{tabular}
+
+\end{table}
+
+検証に使った実装の版と、ソースファイルや実行結果の参照先を\ref{sec:7-3}節に示す。
+実装の評価はXSim上で行い、合成やFPGA実機での性能は扱わない。
+
+

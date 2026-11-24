@@ -1,0 +1,85 @@
+\documentclass[12pt,a4j]{jreport}
+\usepackage[dvipdfmx]{graphicx}
+\begin{document}
+\thispagestyle{empty}
+\begin{center}
+修士論文/ 課題研究報告書\\% どちらか一方を消してください．
+\vfill
+〇〇〇〇〇題目〇〇〇〇〇\\
+\vfill
+〇〇著者名〇〇\\
+\vfill
+主指導教員  〇〇 〇〇\\
+\vfill
+北陸先端科学技術大学院大学\\
+先端科学技術研究科\\
+（〇〇〇〇）\\ %取得希望学位
+\vfill
+令和〇〇年〇月\\ % 学位授与年月
+\vfill
+\end{center}
+\clearpage
+\pagestyle{empty}
+\centerline{Abstract}
+English abstract (1200 words)\\
+〇〇〇〇〇〇〇〇〇〇〇〇〇〇〇〇〇〇〇
+\clearpage
+\centerline{概要}
+日本語の概要\\
+〇〇〇〇〇〇〇〇〇〇〇〇〇〇〇〇〇〇〇
+
+\clearpage\setcounter{page}{0}\pagenumbering{roman}\pagestyle{plain}
+\tableofcontents
+\listoffigures
+\listoftables
+\clearpage\setcounter{page}{0}\pagenumbering{arabic}
+
+\chapter{はじめに}
+〇〇〇〇〇〇〇〇〇〇〇〇〇〇〇〇〇〇\cite{jref1,jref2,jref3}
+\chapter{関連研究}
+\section{セクション名}
+\subsection{サブセクション名}
+〇〇〇〇〇〇〇〇〇〇〇〇〇〇〇〇〇〇
+\chapter{提案手法}
+〇〇〇〇〇〇〇〇〇〇〇〇〇〇〇〇〇〇 (図 \ref{fig1})
+\begin{figure}
+\centering
+% \includegraphics[clip,width=90mm]{boltzmann.jpg}
+(図を貼る)
+% 図のキャプションは図の下に置く。
+\caption{図のキャプション}\label{fig1}
+\end{figure}
+\chapter{実験・評価}
+\begin{table}
+\centering
+% 表のキャプションは表の上に置く。
+\caption{表のキャプション}\label{table1}
+\begin{tabular}{r|rr}
+& a & b\\ \hline
+1& 0.25 & 0.33\\
+2& 0.75 & 0.66\\
+\end{tabular}
+\end{table}
+\chapter{おわりに}
+
+% 参考文献
+\renewcommand{\bibname}{参考文献}
+
+% BibTeX を使わないとき
+% \renewcommand{\bibname}{参考文献}
+% \begin{thebibliography}{99}
+% \bibitem{jref1} 著者名. 本のタイトル. 出版社, 出版年.
+% \bibitem{jref2} 著者1 and 著者2. 論文タイトル. 学会名, pp.zz--ww, 2007.
+% \bibitem{jref3} 著者1, 著者2, and 著者3. 論文タイトル. ジャーナル名, vol.xx, no.yy, pp.zz--ww, 2003.
+% \end{thebibliography}
+
+% BibTeX を使うとき
+\renewcommand{\em}{\it}% booktitle に下線を引かない
+\bibliographystyle{jplain}
+\bibliography{reference}
+
+% 付録
+% \appendix
+% \chapter{参考データ}
+
+\end{document}

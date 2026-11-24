@@ -1,0 +1,11 @@
+177          if (complete !== 1 || (DUAL && (ready !== 1 || left_done !== 1 || right_done !== 1)))
+178              $fatal(1, "FAIL: termination without completed protocol");
+179          if (DUAL && (core0_done_publications != 1 || core1_done_publications != 1))
+180              $fatal(1, "FAIL: each core must publish its own completion exactly once");
+181          if (DUAL && right_unsorted && core1_array_stores == 0)
+182              $fatal(1, "FAIL: unsorted right half had no accepted core1 swap stores");
+183          for (i = 0; i < 64; i = i + 1) begin
+184              index = 32'h1100/4+i; #1;
+185              if (memory_word !== expected[i])
+186                  $fatal(1, "FAIL: array[%0d] expected=%h got=%h", i, expected[i], memory_word);
+187          end

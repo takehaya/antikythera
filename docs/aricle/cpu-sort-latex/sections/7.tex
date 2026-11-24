@@ -1,0 +1,69 @@
+\chapter{結論と限界}\label{chap:7}
+
+\section{検証で得られた知見}\label{sec:7-1}
+
+選定した18入力群では、共有ポートを調停しながら各コアが担当範囲をソートし、両側の完了後にCore0がマージできた。
+10要素の波形では、競合時のPC保持から再開、完了通知、最終配列までを追えた。
+
+
+
+同じ分割ソートを1コアで順に行う場合と比べると、固定乱数64要素で減ったサイクルの大半は、READYから両側のソート完了までの区間にあった。
+一方、マージと書き戻しを含む後段の長さはほぼ変わらなかった。
+
+
+
+\section{検証範囲と未検証事項}\label{sec:7-2}
+
+検証は、初期化した状態から起動し、選定した符号なし32ビットの入力を処理する場合に限った。
+フラグが残った状態からの再起動、64要素を超える入力、Core0固定優先による長時間の待機は調べていない。乱数入力による結果のばらつきや、検査のカバレッジも測定していない。
+
+
+
+合成、配置配線、FPGA実機測定は行っていない。
+実機で何倍速くなるかは、シミュレーションのサイクル数の比だけでは分からない。
+非同期読出しメモリの実装方法、資源量、最大動作周波数は別途評価が必要である。
+準備済みの2024.1用XPRとGUI Tclについても、同版での実行を確認した成果には含めない。
+
+
+
+\section{検証対象の版と根拠資料}\label{sec:7-3}
+
+原本はtakehaya/antikytheraで、HEAD 8b61da20522f5bfcb01908f2342abfea7676bb25に未コミット変更を含む保存状態を出発点とした。
+そこから作成した検証用統合版が本報告の対象であり、HEADだけでは同じ版を再現できない。
+参照した19ファイルの一覧とSHA-256をsource-manifest.jsonに記録した。
+集合の識別子の先頭16桁は62eb51779b0c0173である。
+
+
+
+\begin{table}[H]
+
+\centering
+
+\caption{本文の根拠と保存資料}
+
+\label{tab:8}
+
+\footnotesize
+
+\setlength{\tabcolsep}{3pt}
+
+\renewcommand{\arraystretch}{1.25}
+
+\begin{tabular}{>{\raggedright\arraybackslash}p{\dimexpr0.340493\linewidth-2\tabcolsep\relax}>{\raggedright\arraybackslash}p{\dimexpr0.659507\linewidth-2\tabcolsep\relax}}\toprule
+
+\textbf{根拠} & \textbf{保存資料}\\\midrule
+
+実装と命令 & work/内のRTL、tests/sort/build\_programs.py、research/cases/original\_ten/dual/listing.s\\
+
+54条件の数値 & report/xsim-results.csv、runs/matrix-*/simulate.logと終了記録\\
+
+図3〜5の実画面 & runs/ten-dual-v2/evidence.wdb、report/gui-captures-20261011/内の撮影原本と切出し記録\\
+
+途中状態の検査 & tests/sort/tb\_sort.v、research/sim/tb\_vivado\_sort.v\\
+
+\bottomrule\end{tabular}
+
+\end{table}
+
+原本リポジトリを文献\cite{antikythera}、ツール操作資料を文献\cite{ug900,ug835}に示す。
+これらのツール資料は2020.2版であり、ログに記録された実測版2023.1とは区別する。

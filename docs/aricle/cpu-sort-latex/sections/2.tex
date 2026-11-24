@@ -1,0 +1,102 @@
+\chapter{CPU構成と検証用実装}\label{chap:2}
+
+\section{命令経路と共有データポートの調停}\label{sec:2-1}
+
+各コアはPCと32本の32ビットレジスタを持ち、同じプログラムを実行する。
+各コアは自身のPCが指す命令を独立に読み出す。
+調停器は両コアからデータアクセスの要求を受け、要求が重なるとCore0を優先する。
+Core1は競合中にPCとレジスタを保持する。
+
+
+
+\begin{figure}[H]
+
+\centering
+
+\input{figures/architecture.tex}
+
+\caption{CPUとメモリの接続。双方向矢印は要求と応答の往復を表す。coreIDは各CPU内で返すため、共有データポートを使わない。}\label{fig:1}
+
+\end{figure}
+
+命令用のinst\_memoryは一つの配列を二つのPCで読み出す。
+追加したデータ読出し用のdata\_imageは、同じMEM\_FILEを初期値として持つ別インスタンスである。
+調停後のアドレスが0x1000未満なら入力ROMの値を返し、それ以外ならRAMへ接続する。
+
+
+
+RAMは4,096ワード、計16 KiBである。
+読出しは非同期、書込みはクロックの立上りで行う。
+このメモリ構成をFPGA資源へどう対応させるかは、今回のRTLシミュレーションとは別の検討事項である。
+
+
+
+\section{メモリ配置とコア識別}\label{sec:2-2}
+
+\begin{table}[H]
+
+\centering
+
+\caption{プログラムが使うメモリ領域}
+
+\label{tab:2}
+
+\footnotesize
+
+\setlength{\tabcolsep}{3pt}
+
+\renewcommand{\arraystretch}{1.25}
+
+\begin{tabular}{>{\raggedright\arraybackslash}p{\dimexpr0.284412\linewidth-2\tabcolsep\relax}>{\raggedright\arraybackslash}p{\dimexpr0.338490\linewidth-2\tabcolsep\relax}>{\raggedright\arraybackslash}p{\dimexpr0.377098\linewidth-2\tabcolsep\relax}}\toprule
+
+\textbf{アドレス} & \textbf{内容} & \textbf{アクセスする主体}\\\midrule
+
+0x0000〜0x07FF & プログラム & 両コアの命令フェッチ\\
+
+0x0800〜0x08FF & 入力ROM　最大64要素 & Core0がlwで初期コピー\\
+
+0x1000 & READY & Core0が1を書き、Core1が読む\\
+
+0x1004 / 0x1008 & LEFT\_DONE / RIGHT\_DONE & 各担当コアが1を書く\\
+
+0x100C & COMPLETE & Core0が1を書き、Core1が読む\\
+
+0x1100〜0x11FF & 配列　最大64ワード & 分担ソートと結果の書戻し\\
+
+0x1300〜0x13FF & マージ用作業領域 & Core0\\
+
+0x1FFC / 0x3000 & coreID　値は0または1 & 各CPU内で応答\\
+
+\bottomrule\end{tabular}
+
+\end{table}
+
+0x1000未満の入力ROMをlwで取得できるよう、コード1の選択信号でRAMへのアクセスを抑止する。
+ROM宛てのstoreもRAMへ伝えない。
+読出し値は同じ選択信号でROMまたはRAMから選ぶ。
+
+
+
+\par\medskip\noindent\begin{minipage}{\linewidth}
+\par\medskip\noindent{\small\bfseries コード1　ROMの判定とRAMアクセスの抑止　simple\_memory\_arbiter.v}\par\nopagebreak
+
+\lstinputlisting{code/code-01.txt}
+\end{minipage}\par\medskip
+
+プログラムは0x1FFCでコアIDを読む。
+コード2では、従来の0x3000と同じCPU内部応答へ接続した。
+両アドレスへのアクセスは共有データ要求を出さず、storeは無視する。
+
+
+
+\par\medskip\noindent\begin{minipage}{\linewidth}
+\par\medskip\noindent{\small\bfseries コード2　コアIDの別名とデータ要求　simple\_cpu\_with\_mem\_interface.v}\par\nopagebreak
+
+\lstinputlisting{code/code-02.txt}
+\end{minipage}\par\medskip
+
+本文と付録の行番号は参照元の実ファイルに対応する。
+離れた範囲を抜粋した箇所は...で示し、本文コードでは説明用コメントを省略した。
+命令のPCと機械語を含む一覧は付録Aに置く。
+
+

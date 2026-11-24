@@ -1,0 +1,13 @@
+ 93      lw     $t5, 0($t0)
+ 94      lw     $t6, 0($t2)
+ 95      slt    $t7, $t6, $t5
+ 96      bne    $t7, $zero, merge_take_right
+ 97      sw     $t5, 0($t4)
+ 98      addiu  $t0, $t0, 4
+ 99      addiu  $t4, $t4, 4
+     ...
+120  merge_copy_back:
+121      addiu  $a0, $zero, 4864
+122      addiu  $a1, $zero, 4352
+123      addiu  $a2, $zero, 10
+124      j      copy_words

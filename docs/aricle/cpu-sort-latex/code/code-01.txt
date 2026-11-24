@@ -1,0 +1,12 @@
+ 55      wire [31:0] dmem_read_data;
+ 56      wire [31:0] rom_data_read;
+ 57      wire data_address_is_rom = (dmem_addr_mux < 32'h00001000);
+ 58      wire [31:0] shared_read_data = data_address_is_rom ? rom_data_read : dmem_read_data;
+ 59  
+ 60      DataMemory data_memory (
+ 61          .clk(clk),
+ 62          .MemWrite(dmem_write_granted && !data_address_is_rom),
+ 63          .MemRead(dmem_read_granted && !data_address_is_rom),
+     ...
+ 87      assign core0_dmem_read_data = core0_dmem_grant ? shared_read_data : 32'h0;
+ 88      assign core1_dmem_read_data = core1_dmem_grant ? shared_read_data : 32'h0;

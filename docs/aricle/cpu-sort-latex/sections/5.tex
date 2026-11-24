@@ -1,0 +1,63 @@
+\chapter{検証結果}\label{chap:5}
+
+\section{出力と途中状態の検査結果}\label{sec:5-1}
+
+18の入力群をそれぞれ3方式で実行した。全54条件で出力が期待値と一致し、\ref{sec:3-3}節の検査を通過した。
+各条件のPASS行と終了コード0を照合した結果を付録Bにまとめる。
+図\ref{fig:3}〜5に、指定の10要素をdualで再実行して記録した波形を示す。
+
+
+
+指定10要素と乱数64要素の各3方式による6件の波形デモ、およびコアID、既存マルチコア動作、ROM読出し競合、メモリ配置の4件の追加検証も通過した。
+これらは54条件とは別の実行記録で、デモの入力は主検証と重複する。
+
+
+
+誤った期待値を与えた負例は、array[0]の期待値0xFFFFFFFFに対して実値0x00000000という不一致を検出し、終了コード1で停止した。
+この負例は期待値比較が働くことを示すが、検査器の全ての異常検出経路を網羅したものではない。
+
+
+
+\section{1コア・2コア実行の総サイクル数比較}\label{sec:5-2}
+
+\begin{table}[H]
+
+\centering
+
+\caption{代表入力の総サイクル数}
+
+\label{tab:5}
+
+\footnotesize
+
+\setlength{\tabcolsep}{3pt}
+
+\renewcommand{\arraystretch}{1.25}
+
+\begin{tabular}{>{\raggedright\arraybackslash}p{\dimexpr0.150218\linewidth-2\tabcolsep\relax}>{\raggedright\arraybackslash}p{\dimexpr0.216313\linewidth-2\tabcolsep\relax}>{\raggedright\arraybackslash}p{\dimexpr0.170247\linewidth-2\tabcolsep\relax}>{\raggedright\arraybackslash}p{\dimexpr0.190276\linewidth-2\tabcolsep\relax}>{\raggedright\arraybackslash}p{\dimexpr0.272947\linewidth-2\tabcolsep\relax}}\toprule
+
+\textbf{入力} & \textbf{serial\_split} & \textbf{dual} & \textbf{split/dual} & \textbf{参考 serial\_full}\\\midrule
+
+指定10 & 442 & 366 & 1.21 & 441\\
+
+乱数7 & 281 & 260 & 1.08 & 230\\
+
+乱数17 & 923 & 733 & 1.26 & 1,164\\
+
+乱数32 & 2,513 & 1,772 & 1.42 & 3,763\\
+
+乱数64 & 8,614 & 5,527 & 1.56 & 14,803\\
+
+\bottomrule\end{tabular}
+
+\end{table}
+
+指定10要素は442から366サイクルになった。固定乱数の4例では、1コアの分割実行と2コア実行のサイクル比が7要素の1.08から64要素の1.56まで広がった。
+ただし長さごとに異なる配列を一つずつ使っており、この差を要素数だけの効果とは判断できない。
+
+
+
+7要素では、1コアで配列全体をソートする参考条件が230サイクル、2コアで分割してマージする方式が260サイクルだった。
+この比較ではマージの有無も異なるため、30サイクルの差をコア数だけに帰することはできない。
+
+

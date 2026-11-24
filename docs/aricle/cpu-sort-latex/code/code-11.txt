@@ -1,0 +1,44 @@
+ 46  # copy_words(a0=source, a1=destination, a2=count), clobbers a0/a1/a2/t0
+ 47  copy_words:
+ 48      beq    $a2, $zero, copy_return         # 0088: 10c00006
+ 49  copy_loop:
+ 50      lw     $t0, 0($a0)                     # 008c: 8c880000
+ 51      sw     $t0, 0($a1)                     # 0090: aca80000
+ 52      addiu  $a0, $a0, 4                     # 0094: 24840004
+ 53      addiu  $a1, $a1, 4                     # 0098: 24a50004
+ 54      addiu  $a2, $a2, -1                    # 009c: 24c6ffff
+ 55      bne    $a2, $zero, copy_loop           # 00a0: 14c0fffa
+ 56  copy_return:
+ 57      jr     $ra                             # 00a4: 03e00008
+ 58  # bubble_sort(a0=base, a1=count): unsigned ascending, clobbers t0..t7
+ 59  # Fixed shrinking passes, no early-exit optimization; shared by all modes.
+ 60  bubble_sort:
+ 61      addiu  $t7, $zero, 2                   # 00a8: 240f0002
+ 62      slt    $t6, $a1, $t7                   # 00ac: 00af702a
+ 63      bne    $t6, $zero, bubble_return       # 00b0: 15c0000e
+ 64      addiu  $t0, $a1, -1                    # 00b4: 24a8ffff
+ 65      sll    $t0, $t0, 2                     # 00b8: 00084080
+ 66      addu   $t0, $a0, $t0                   # 00bc: 00884021
+ 67  bubble_outer:
+ 68      addu   $t1, $a0, $zero                 # 00c0: 00804821
+ 69  bubble_inner:
+ 70      lw     $t2, 0($t1)                     # 00c4: 8d2a0000
+ 71      lw     $t3, 4($t1)                     # 00c8: 8d2b0004
+ 72      slt    $t4, $t3, $t2                   # 00cc: 016a602a
+ 73      beq    $t4, $zero, bubble_no_swap      # 00d0: 11800002
+ 74      sw     $t3, 0($t1)                     # 00d4: ad2b0000
+ 75      sw     $t2, 4($t1)                     # 00d8: ad2a0004
+ 76  bubble_no_swap:
+ 77      addiu  $t1, $t1, 4                     # 00dc: 25290004
+ 78      bne    $t1, $t0, bubble_inner          # 00e0: 1528fff8
+ 79      addiu  $t0, $t0, -4                    # 00e4: 2508fffc
+ 80      bne    $t0, $a0, bubble_outer          # 00e8: 1504fff5
+ 81  bubble_return:
+ 82      jr     $ra                             # 00ec: 03e00008
+ 83  # Merge sorted halves into scratch, then copy back. Equality chooses left.
+ 84  merge_halves:
+ 85      addiu  $t0, $zero, 4352                # 00f0: 24081100
+ 86      addiu  $t1, $zero, 4372                # 00f4: 24091114
+ 87      addiu  $t2, $zero, 4372                # 00f8: 240a1114
+ 88      addiu  $t3, $zero, 4392                # 00fc: 240b1128
+ 89      addiu  $t4, $zero, 4864                # 0100: 240c1300

@@ -1,0 +1,13 @@
+157              previous_pc0 = pc0; previous_pc1 = pc1;
+158              previous_regs0 = all_regs0;
+159              previous_regs1 = all_regs1;
+160              previous_stall0 = stall0; previous_stall1 = stall1;
+161              if (stall1) stalls1 = stalls1 + 1;
+162              @(posedge clk); #1;
+163              cycles = cycles + 1;
+164              if (previous_stall0 && (pc0 !== previous_pc0 ||
+165                  all_regs0 !== previous_regs0))
+166                  $fatal(1, "FAIL: core0 changed state at stalled edge");
+167              if (previous_stall1 && (pc1 !== previous_pc1 ||
+168                  all_regs1 !== previous_regs1))
+169                  $fatal(1, "FAIL: core1 changed state at stalled edge");

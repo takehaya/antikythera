@@ -1,0 +1,5 @@
+222          for (snapshot_index = 0; snapshot_index < 64; snapshot_index = snapshot_index + 1)
+223              final_values[snapshot_index] = array_words[snapshot_index];
+224          final_valid = 1;
+225          if (!initial_valid) $fatal(1, "FAIL: READY input snapshot missing");
+226          passed = 1;

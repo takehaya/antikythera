@@ -1,0 +1,12 @@
+ 21      addiu  $t0, $zero, 1
+ 22      sw     $t0, 4100($zero)
+ 23  wait_right:
+ 24      lw     $t0, 4104($zero)
+ 25      beq    $t0, $zero, wait_right
+ 26      jal    merge_halves
+     ...
+ 38      addiu  $t0, $zero, 1
+ 39      sw     $t0, 4104($zero)
+ 40  wait_complete:
+ 41      lw     $t0, 4108($zero)
+ 42      beq    $t0, $zero, wait_complete

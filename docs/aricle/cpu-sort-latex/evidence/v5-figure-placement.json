@@ -1,0 +1,53 @@
+{
+  "figure3": {
+    "source": "02-synchronization-wave.png",
+    "source_sha256": "c941f8716ea7416076c9c4ded1493151ece90be3c20bfcb27af8ecd0d7228030",
+    "scale_pt_per_pixel": 0.32,
+    "repeat_per_panel": [
+      [
+        0,
+        0,
+        410,
+        382
+      ],
+      [
+        555,
+        0,
+        120,
+        382
+      ]
+    ],
+    "time_panels": [
+      [
+        742,
+        0,
+        1008,
+        382
+      ],
+      [
+        1750,
+        0,
+        1008,
+        382
+      ]
+    ]
+  },
+  "figure4": {
+    "source": "03-contention-wave.png",
+    "source_sha256": "fb1eed325b9cd0854ed30eb8f79ab37b5ded51c7e694e3f05aad8a638dff5ede",
+    "crop": [
+      0,
+      0,
+      1950,
+      382
+    ],
+    "width_pt": 499.2756
+  },
+  "figure5": {
+    "source": "01a-correctness-values.png",
+    "source_sha256": "b36576f1159bc3e35c4b6a029272ef2a97faf259834653800969aee2d6897bf1",
+    "width_pt": 204
+  },
+  "original_pixels_modified": false,
+  "new_captures": false
+}

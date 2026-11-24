@@ -1,0 +1,13 @@
+ 62      wire RegWriteGated = RegWrite && !stall;
+     ...
+ 93      Register rf(
+ 94          .clk(clk),
+ 95          .RegWrite(RegWriteGated),
+     ...
+195      always @(posedge clk or posedge reset) begin
+196          if(reset)
+197              PC <= 0;
+198          else if (!stall)
+199              PC <= PCnext;
+200  
+201      end

@@ -1,0 +1,28 @@
+\begin{tikzpicture}[x=\dimexpr\linewidth/500\relax,y=-1pt,>=stealth]
+\draw[->,line width=0.5pt] (99,70) -- (99,90);
+\draw[->,line width=0.5pt] (400,70) -- (400,90);
+\draw[->,line width=0.5pt] (99,126) -- (99,146);
+\draw[->,line width=0.5pt] (400,126) -- (400,146);
+\draw[->,line width=0.5pt] (99,187) -- (99,207);
+\draw[->,line width=0.5pt] (400,187) -- (400,207);
+\draw[->,line width=0.5pt] (99,248) -- (99,268);
+\draw[->,line width=0.5pt] (400,248) -- (400,268);
+\draw[->,line width=0.5pt] (198,48) -- (301,48);
+\draw[->,line width=0.5pt] (301,168) -- (198,168);
+\draw[->,line width=0.5pt] (198,290) -- (301,290);
+\node[align=center,inner sep=2pt,text width=0.38000\linewidth,minimum height=48pt,draw=black!50,fill=black!3] at (99.0,46.0) {\fontsize{9}{11.700000000000001}\selectfont フラグを0に初期化\\入力をROMからRAMへコピー\\READYを1にする};
+\node[align=center,inner sep=2pt,text width=0.38000\linewidth,minimum height=48pt,draw=black!50,fill=black!3] at (400.0,46.0) {\fontsize{9}{11.700000000000001}\selectfont READYが1になるまで待機\\入力の準備ができたら進む};
+\node[align=center,inner sep=2pt,text width=0.38000\linewidth,minimum height=36pt,draw=black!50,fill=black!3] at (99.0,108.0) {\fontsize{9}{11.700000000000001}\selectfont 前半をバブルソート\\floor(N/2)要素};
+\node[align=center,inner sep=2pt,text width=0.38000\linewidth,minimum height=36pt,draw=black!50,fill=black!3] at (400.0,108.0) {\fontsize{9}{11.700000000000001}\selectfont 後半をバブルソート\\残りの要素};
+\node[align=center,inner sep=2pt,text width=0.38000\linewidth,minimum height=41pt,draw=black!50,fill=black!3] at (99.0,166.5) {\fontsize{9}{11.700000000000001}\selectfont LEFT\_DONEを1にする\\RIGHT\_DONEが1になるまで待機};
+\node[align=center,inner sep=2pt,text width=0.38000\linewidth,minimum height=41pt,draw=black!50,fill=black!3] at (400.0,166.5) {\fontsize{9}{11.700000000000001}\selectfont RIGHT\_DONEを1にする};
+\node[align=center,inner sep=2pt,text width=0.38000\linewidth,minimum height=41pt,draw=black!50,fill=black!3] at (99.0,227.5) {\fontsize{9}{11.700000000000001}\selectfont 二つの区間を作業領域へマージ\\配列領域へ結果を書き戻す};
+\node[align=center,inner sep=2pt,text width=0.38000\linewidth,minimum height=41pt,draw=black!50,fill=black!3] at (400.0,227.5) {\fontsize{9}{11.700000000000001}\selectfont COMPLETEが1になるまで待機};
+\node[align=center,inner sep=2pt,text width=0.38000\linewidth,minimum height=41pt,draw=black!50,fill=black!3] at (99.0,288.5) {\fontsize{9}{11.700000000000001}\selectfont COMPLETEを1にする\\終端ループへ移る};
+\node[align=center,inner sep=2pt,text width=0.38000\linewidth,minimum height=41pt,draw=black!50,fill=black!3] at (400.0,288.5) {\fontsize{9}{11.700000000000001}\selectfont COMPLETEを確認\\終端ループへ移る};
+\node[align=center,inner sep=2pt,text width=0.38000\linewidth,minimum height=20pt] at (99.0,10.0) {\fontsize{10}{13.0}\selectfont \bfseries Core0};
+\node[align=center,inner sep=2pt,text width=0.38000\linewidth,minimum height=20pt] at (400.0,10.0) {\fontsize{10}{13.0}\selectfont \bfseries Core1};
+\node[align=center,inner sep=2pt,text width=0.16000\linewidth,minimum height=17pt] at (249.0,36.5) {\fontsize{9}{11.700000000000001}\selectfont READY};
+\node[align=center,inner sep=2pt,text width=0.16000\linewidth,minimum height=17pt] at (249.0,156.5) {\fontsize{9}{11.700000000000001}\selectfont RIGHT\_DONE};
+\node[align=center,inner sep=2pt,text width=0.16000\linewidth,minimum height=17pt] at (249.0,278.5) {\fontsize{9}{11.700000000000001}\selectfont COMPLETE};
+\end{tikzpicture}

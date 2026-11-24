@@ -1,0 +1,20 @@
+\begin{tikzpicture}[x=\dimexpr\linewidth/500\relax,y=-1pt,>=stealth]
+\draw[<->,line width=0.5pt] (110,48) -- (110,96);
+\draw[<->,line width=0.5pt] (389,48) -- (389,96);
+\draw[<->,line width=0.5pt] (163,164) -- (163,211);
+\draw[<->,line width=0.5pt] (337,164) -- (337,211);
+\draw[<->,line width=0.5pt] (249.5,269) -- (249.5,292);
+\draw[<->,line width=0.5pt] (195,332) -- (195,343) -- (122,343) -- (122,355);
+\draw[<->,line width=0.5pt] (305,332) -- (305,343) -- (377,343) -- (377,355);
+\node[align=center,inner sep=2pt,text width=0.91000\linewidth,minimum height=48pt,draw=black!50,fill=black!3] at (249.5,24.0) {\fontsize{10}{13.0}\selectfont 命令ROM　inst\_memory\\同じ配列を二つのPCから独立に読出し};
+\node[align=center,inner sep=2pt,text width=0.35400\linewidth,minimum height=68pt,draw=black!50,fill=black!3] at (110.5,130.0) {\fontsize{10}{13.0}\selectfont Core0　ID 0\\PC・32レジスタ\\coreIDはCPU内で応答};
+\node[align=center,inner sep=2pt,text width=0.35400\linewidth,minimum height=68pt,draw=black!50,fill=black!3] at (388.5,130.0) {\fontsize{10}{13.0}\selectfont Core1　ID 1\\PC・32レジスタ\\coreIDはCPU内で応答};
+\node[align=center,inner sep=2pt,text width=0.51000\linewidth,minimum height=58pt,draw=black!50,fill=black!3] at (249.5,240.0) {\fontsize{10}{13}\selectfont 共有データ調停器\\Core0固定優先　許可した要求を選択\\競合中のCore1へstall};
+\node[align=center,inner sep=2pt,text width=0.27800\linewidth,minimum height=40pt,draw=black!50,fill=black!3] at (249.5,312.0) {\fontsize{9}{11.700000000000001}\selectfont アドレスによる選択\\0x1000未満はROM};
+\node[align=center,inner sep=2pt,text width=0.40000\linewidth,minimum height=58pt,draw=black!50,fill=black!3] at (122.0,384.0) {\fontsize{9}{11.700000000000001}\selectfont データ読出し用ROM　data\_image\\命令ROMと同じMEM\_FILE\\ROM宛てのstoreは抑止};
+\node[align=center,inner sep=2pt,text width=0.40000\linewidth,minimum height=58pt,draw=black!50,fill=black!3] at (377.0,384.0) {\fontsize{9}{11.700000000000001}\selectfont 共有RAM　data\_memory\\4096ワード　16 KiB\\立上り書込み・組合せ読出し};
+\node[align=center,inner sep=2pt,text width=0.16400\linewidth,minimum height=22pt] at (165.0,74.0) {\fontsize{9}{11.700000000000001}\selectfont PC0 / 命令0};
+\node[align=center,inner sep=2pt,text width=0.16400\linewidth,minimum height=22pt] at (444.0,74.0) {\fontsize{9}{11.700000000000001}\selectfont PC1 / 命令1};
+\node[align=center,inner sep=2pt,text width=0.25800\linewidth,minimum height=32pt] at (86.5,190.0) {\fontsize{9}{11.700000000000001}\selectfont 要求・アドレス・書込値\\読出値・stall};
+\node[align=center,inner sep=2pt,text width=0.25800\linewidth,minimum height=32pt] at (417.5,190.0) {\fontsize{9}{11.700000000000001}\selectfont 要求・アドレス・書込値\\読出値・stall};
+\end{tikzpicture}

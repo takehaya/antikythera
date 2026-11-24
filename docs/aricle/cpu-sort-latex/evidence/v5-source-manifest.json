@@ -1,0 +1,27 @@
+{
+  "scope": "RTL source directory and report-referenced workload/test sources",
+  "source_head": "8b61da20522f5bfcb01908f2342abfea7676bb25",
+  "includes_uncommitted_source_state": true,
+  "snapshot_sha256": "62eb51779b0c017309f85ba769c79c18a91c8dbf31c9e61bee0fece0700b8e6d",
+  "files": {
+    "antikythera.srcs/source_1/new/alu.v": "acf837060bda4667c7c4d02d4c03b8635042d0702dfceb98ab77e2ea98e394a9",
+    "antikythera.srcs/source_1/new/alu_control.v": "408044cf810813c01d496425a0b29a82c15cabeca18fbc024a5540526160cc92",
+    "antikythera.srcs/source_1/new/cpu.v": "e390f29869d81a87d4f3f28adbd53daae0addf2325cb606644cb24d01e5c8f85",
+    "antikythera.srcs/source_1/new/data_memory.v": "7e00763db803069b158abd4ffd27b0107f5970ff2d851dc66e8eb09f4376d604",
+    "antikythera.srcs/source_1/new/instaction_memory.v": "6ac1111bea15484dc2574abec816ae67979b7d80fd34232adc55b7fcdeecaefd",
+    "antikythera.srcs/source_1/new/main_control.v": "646ed1bff67dc9b882186cd1d3645e99bb50b959c62fd471f2f656fae773b888",
+    "antikythera.srcs/source_1/new/memory.v": "010de9f8c5c600b8d042011377dd66fe0754d4c7687cce562dadd54450a2916a",
+    "antikythera.srcs/source_1/new/multicore_cpu.v": "b5045e233c66b0393be0181d07f904b9592555c52e1301adbed96bf140634b78",
+    "antikythera.srcs/source_1/new/register.v": "ed265b0bd9320dce349533ba2de62b2f313fda309695c1ec4569c7b7b64a6fc5",
+    "antikythera.srcs/source_1/new/sign_extender.v": "040b9781763dd254cc58a1f4cbdb5608d3f3cd8d3591768f18504292c0d6b982",
+    "antikythera.srcs/source_1/new/simple_cpu_with_mem_interface.v": "b33747555b7ec4fb922a988efbbf032c2fcbb75511d0d1e144e62eab91456673",
+    "antikythera.srcs/source_1/new/simple_memory_arbiter.v": "80294cdfcf4148846a124f64a1db1a647979e8face0a9265ae812bc7183730f0",
+    "antikythera.srcs/source_1/new/zero_extender.v": "de8359bfec2e8f8589d41406170e38775cb0c69125796afd66591e12e395434e",
+    "tests/sort/build_programs.py": "d364559cad792bc8d0a9a2bd8c6023bd9454ee9217bab3f7a9b33c08e3e4ed56",
+    "tests/sort/tb_sort.v": "7ba7f5c2075bdaf1b92b02c34b4abb6026bb730eaa96efb8be5ac8e71e75f05d",
+    "research/sim/tb_matrix_top.v": "a5d4ac4b9264ab7fd5589d31a19462ca671b9135f433a58dd7073f30dd469c0b",
+    "research/sim/tb_vivado_sort.v": "30e9d0d43547a0bb21f8fb4297bcde8277d1aff2e01ee09c9835fd695d762fbe",
+    "research/matrix/cases.json": "da110e091b4a5445d6aecff2d28ab8608943861b74ea0295a7a2c6cfc322d461",
+    "research/cases/original_ten/dual/listing.s": "3c39e72cb76c81064ecc3629eedf26c947eb78117e9cdec87c5ff68a552b5821"
+  }
+}

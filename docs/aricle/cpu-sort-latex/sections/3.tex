@@ -1,0 +1,75 @@
+\chapter{検証環境と方法}\label{chap:3}
+
+\section{実行環境と比較条件}\label{sec:3-1}
+
+実行記録はXSim 2023.1（64-bit、SW Build 3865809）のbehavioral simulationである。
+xvlog、xelab、xsimの順に実行し、テストベンチのクロック周期は10 nsとした。
+符号なし32ビット値を扱い、RAMとレジスタをinitial処理で初期化して起動する。
+このCPUは分岐遅延スロットを持たず、jalはPC+4を保存する。
+
+
+
+\begin{table}[H]
+
+\centering
+
+\caption{比較する処理とCPU構成}
+
+\label{tab:3}
+
+\footnotesize
+
+\setlength{\tabcolsep}{3pt}
+
+\renewcommand{\arraystretch}{1.25}
+
+\begin{tabular}{>{\raggedright\arraybackslash}p{\dimexpr0.184267\linewidth-2\tabcolsep\relax}>{\raggedright\arraybackslash}p{\dimexpr0.494717\linewidth-2\tabcolsep\relax}>{\raggedright\arraybackslash}p{\dimexpr0.321016\linewidth-2\tabcolsep\relax}}\toprule
+
+\textbf{方式} & \textbf{ソートとマージ} & \textbf{CPU構成}\\\midrule
+
+dual & 二つの区間を並行してソートし、Core0がマージ & 同じCPUを2コア接続\\
+
+serial\_split & 二つの区間を順にソートし、同じマージを行う & 同じCPUを1コア使用\\
+
+serial\_full & 配列全体を一度にソートし、マージしない & 同じCPUを1コア使用\\
+
+\bottomrule\end{tabular}
+
+\end{table}
+
+主に比較するのはserial\_splitとdualである。
+1コア条件も同じCPUと調停器を使い、第2の要求元を0に固定する。
+入力と分割ソート、マージの処理をそろえ、同期と待機を含めて比較する。
+serial\_fullは全体を一度にソートしてマージしないため、アルゴリズムの構成が異なる参考条件とする。
+
+
+
+\section{入力条件と測定区間}\label{sec:3-2}
+
+長さ0、1、2、3、7、9、10、16、17、32、64から18入力群を選び、各3方式で計54条件を実行した。
+空配列、単要素、整列済み、逆順、重複、同値、符号なし32ビットの境界値、固定した乱数配列を含む。
+全条件の内訳と結果は付録Bに示す。
+検証した長さと入力値は限られている。乱数配列も長さごとに一つに固定した。
+
+
+
+総サイクル数cyclesは、リセット解除から参加するコアが終端ループへ到達するまでとする。
+入力コピー、初期化、ソート、待機、マージ、書き戻しを含む。
+READY、左右の完了、COMPLETEの初回観測サイクルも記録する。
+クロック周期10 nsはシミュレーションの設定であり、実機の動作周波数を実証した値ではない。
+
+
+
+\section{途中状態と最終配列の検査}\label{sec:3-3}
+
+テストベンチはPCと受理されたstoreアドレスの未知値や非整列、担当外書込み、READY前のCore1書込み、両側完了前のマージ、完了通知の代行を検出する。
+ストール時はPCと全32レジスタを比較し、終了時は配列領域の64ワードと境界のガードを期待値に照合する。
+全てのloadアドレスを検査するものではない。
+検査コードは付録Cに示す。
+
+
+
+CPUに初期化から実行させ、DUTのPC、RAM、レジスタ、完了フラグへ値を直接注入して成功状態を作らない。
+波形用テストベンチはこれらの検査に加え、入力コピー完了時と最終配列のスナップショットを保存する。
+
+

@@ -1,0 +1,45 @@
+  1  # Mode: dual; count=10; split=5/5; UNSIGNED32
+  2  # Target-specific SLT is unsigned; NO branch/jump delay slots; JAL saves PC+4.
+  3  # All addresses are bytes. READY must initially be zero before releasing cores.
+  4  _start:
+  5      lw     $s0, 8188($zero)                # 0000: 8c101ffc
+  6      bne    $s0, $zero, secondary           # 0004: 16000015
+  7  # Core 0 owns initialization, input copy, merge, and COMPLETE publication.
+  8      sw     $zero, 4096($zero)              # 0008: ac001000
+  9      sw     $zero, 4100($zero)              # 000c: ac001004
+ 10      sw     $zero, 4104($zero)              # 0010: ac001008
+ 11      sw     $zero, 4108($zero)              # 0014: ac00100c
+ 12      addiu  $a0, $zero, 2048                # 0018: 24040800
+ 13      addiu  $a1, $zero, 4352                # 001c: 24051100
+ 14      addiu  $a2, $zero, 10                  # 0020: 2406000a
+ 15      jal    copy_words                      # 0024: 0c000022
+ 16      addiu  $t0, $zero, 1                   # 0028: 24080001
+ 17      sw     $t0, 4096($zero)                # 002c: ac081000
+ 18      addiu  $a0, $zero, 4352                # 0030: 24041100
+ 19      addiu  $a1, $zero, 5                   # 0034: 24050005
+ 20      jal    bubble_sort                     # 0038: 0c00002a
+ 21      addiu  $t0, $zero, 1                   # 003c: 24080001
+ 22      sw     $t0, 4100($zero)                # 0040: ac081004
+ 23  wait_right:
+ 24      lw     $t0, 4104($zero)                # 0044: 8c081008
+ 25      beq    $t0, $zero, wait_right          # 0048: 1100fffe
+ 26      jal    merge_halves                    # 004c: 0c00003c
+ 27  publish_complete:
+ 28      addiu  $t0, $zero, 1                   # 0050: 24080001
+ 29      sw     $t0, 4108($zero)                # 0054: ac08100c
+ 30      j      halt                            # 0058: 08000021
+ 31  secondary:
+ 32  wait_ready:
+ 33      lw     $t0, 4096($zero)                # 005c: 8c081000
+ 34      beq    $t0, $zero, wait_ready          # 0060: 1100fffe
+ 35      addiu  $a0, $zero, 4372                # 0064: 24041114
+ 36      addiu  $a1, $zero, 5                   # 0068: 24050005
+ 37      jal    bubble_sort                     # 006c: 0c00002a
+ 38      addiu  $t0, $zero, 1                   # 0070: 24080001
+ 39      sw     $t0, 4104($zero)                # 0074: ac081008
+ 40  wait_complete:
+ 41      lw     $t0, 4108($zero)                # 0078: 8c08100c
+ 42      beq    $t0, $zero, wait_complete       # 007c: 1100fffe
+ 43      j      halt                            # 0080: 08000021
+ 44  halt:
+ 45      j      halt                            # 0084: 08000021

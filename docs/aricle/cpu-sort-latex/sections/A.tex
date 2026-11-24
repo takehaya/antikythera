@@ -1,0 +1,32 @@
+\appendix
+
+\chapter{10要素の2コア実行プログラム}\label{chap:A}
+
+research/cases/original\_ten/dual/listing.sの実ファイルを行番号付きで掲載する。
+右側の注記は命令のPCと機械語である。
+この一覧を使うと、図\ref{fig:4}のPCがどの命令を指すか分かる。
+長いコメントは紙面内で折り返す。
+
+
+
+\par\medskip\noindent{\small\bfseries コードA1　起動、分担、完了待機（1〜45行）}\par\nopagebreak
+
+\lstinputlisting{code/code-10.txt}
+
+\section*{コピー処理とバブルソート}
+
+\par\medskip\noindent{\small\bfseries コードA2　コピー、比較交換、マージの入口（46〜89行）}\par\nopagebreak
+
+\lstinputlisting{code/code-11.txt}
+
+70〜75行の比較交換は両コアで共通である。
+走査範囲を1要素ずつ縮める固定パスを使い、交換がなかったことによる早期終了は行わない。
+
+
+
+\clearpage
+\section*{マージ処理と入力データ}
+
+\par\medskip\noindent{\small\bfseries コードA3　マージ、書き戻し、入力ROM（90行〜末尾）}\par\nopagebreak
+
+\lstinputlisting{code/code-12.txt}

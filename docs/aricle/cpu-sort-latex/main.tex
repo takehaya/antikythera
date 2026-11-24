@@ -1,0 +1,92 @@
+% Based on the supplied JAIST thesis_J.tex (2022-02 revised).
+% Requires pLaTeX + pBibTeX + dvipdfmx. Do not use XeLaTeX/Tectonic.
+% v7: IPAex TrueType fonts (Docker map), explicit Adobe-Japan1 ToUnicode in build.py.
+\documentclass[dvipdfmx,12pt,a4j]{jreport}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage[dvipdfmx]{graphicx}
+\usepackage[margin=23mm,top=25mm,bottom=25mm]{geometry}
+\usepackage{array,booktabs,float,listings,textcomp,url}
+\usepackage{xcolor,tikz}
+\usepackage[dvipdfmx,hidelinks]{hyperref}
+\usepackage{pxjahyper}
+\usetikzlibrary{arrows}
+\AtBeginDvi{\special{pdf:tounicode EUC-UCS2}}
+\counterwithout{figure}{chapter}
+\counterwithout{table}{chapter}
+\renewcommand{\thefigure}{\arabic{figure}}
+\renewcommand{\thetable}{\arabic{table}}
+\lstset{basicstyle=\ttfamily\fontsize{9}{11}\selectfont,
+  columns=fullflexible,keepspaces=true,showstringspaces=false,
+  breaklines=true,breakatwhitespace=false,breakindent=4em,
+  frame=tb,framerule=.3pt,upquote=true,aboveskip=.7em,belowskip=.7em}
+\hypersetup{pdftitle={2コアCPUにおける分割ソートの設計と検証},pdfauthor={早坂（正式氏名未確定）}}
+\hypersetup{pageanchor=false}
+\begin{document}
+\thispagestyle{empty}
+\begin{center}
+副テーマ実施報告\\
+\vfill
+{\LARGE 2コアCPUにおける\\分割ソートの設計と検証}\\
+\bigskip
+共有メモリの調停と完了同期を実コードと波形で確認する\\
+\vfill
+早坂（正式な氏名表記は未確定）\\
+学籍番号：未確定\\
+\vfill
+主指導教員：未確定\\
+\vfill
+北陸先端科学技術大学院大学\\
+所属の正式表記：未確定\\
+\vfill
+提出日：未確定\\
+改訂日：2026年11月22日\\
+\vfill
+\end{center}
+\clearpage\pagestyle{empty}
+\centerline{Abstract}\bigskip
+This report integrates an existing two-core CPU, sorting programs, and test
+code, and verifies their behavior and cycle counts using XSim 2023.1.
+The cores sort separate halves of an array; Core0 merges the results after
+both cores publish completion. A ten-element execution is traced using
+source-code excerpts and recorded waveforms, connecting synchronization,
+shared-port contention, and the final array. All 54 conditions, comprising
+18 input groups and three execution modes, passed the output and intermediate
+state checks. Compared with executing the same split-and-merge work on one
+core, the cycle count decreased from 442 to 366 for the specified ten-element
+input, and from 8,614 to 5,527 for a fixed random 64-element input.
+Initial copying and merging remain on Core0, and shared-port stalls also
+remain, so the total cycle count was not halved. The results concern RTL
+simulation; synthesis and physical FPGA performance were not evaluated.
+\clearpage
+\centerline{概要}\bigskip
+共有メモリを使う2コアCPUで分割ソートの動作を検証した。各コアが配列の半分をバブルソートし、両コアのソートが終わるとCore0が結果をマージする。
+既存のCPU、ソート生成器、テストベンチを組み合わせ、入力ROMの読出し経路とコアIDの互換アドレスを加えた。
+XSim 2023.1で18の入力群をそれぞれ3方式で実行した。全54条件で、出力と実行途中の状態が検査に合格した。
+10要素の波形では、共有ポートの競合でCore1が停止する区間と、両側のソート完了からマージを経て最終配列が得られるまでを追った。
+
+同じ分割ソートとマージを1コアで順に行う場合に比べ、指定の10要素では442から366サイクル、固定乱数64要素では8,614から5,527サイクルに減った。
+初期コピーとマージはCore0が担当し、並行ソート中にも共有ポートの待ち時間がある。
+評価はRTLシミュレーションに限り、合成とFPGA実機での測定は行っていない。
+
+
+\clearpage\setcounter{page}{0}\pagenumbering{roman}\pagestyle{plain}\hypersetup{pageanchor=true}
+\tableofcontents
+\listoffigures
+\listoftables
+\clearpage\setcounter{page}{0}\pagenumbering{arabic}
+\input{sections/1.tex}
+\input{sections/2.tex}
+\input{sections/3.tex}
+\input{sections/4.tex}
+\input{sections/5.tex}
+\input{sections/6.tex}
+\input{sections/7.tex}
+\renewcommand{\bibname}{参考文献}
+\renewcommand{\em}{\it}
+\bibliographystyle{jplain}
+\bibliography{reference}
+\input{sections/A.tex}
+\input{sections/B.tex}
+\input{sections/C.tex}
+\end{document}

@@ -1,0 +1,15 @@
+name                                 type              encoding         emb sub uni object ID
+------------------------------------ ----------------- ---------------- --- --- --- ---------
+OQXPHB+IPAexMincho                   CID TrueType      Identity-H       yes yes yes      5  0
+OXXSGJ+LMRoman17-Regular             Type 1C           Custom           yes yes yes      7  0
+KMUOMR+LMRoman12-Regular             Type 1C           Custom           yes yes yes      8  0
+ZLANCO+IPAexGothic                   CID TrueType      Identity-H       yes yes yes     12  0
+HRQLBK+LMRoman12-Bold                Type 1C           Custom           yes yes yes     14  0
+FVRZVO+LMMathItalic12-Regular        Type 1C           Custom           yes yes yes     15  0
+LWAFHA+LMRoman10-Regular             Type 1C           Custom           yes yes yes     20  0
+RJOGCG+LMRoman9-Regular              Type 1C           Custom           yes yes yes     22  0
+QUOUOL+LMRoman10-Bold                Type 1C           Custom           yes yes yes     24  0
+VACYSS+LMMono9-Regular               Type 1C           Custom           yes yes yes     25  0
+WKRZCX+LMMono9-Regular               Type 1C           Custom           yes yes yes     26  0
+TPAJTR+LMRoman12-Italic              Type 1C           Custom           yes yes yes     41  0
+WMXJFZ+LMMono12-Regular              Type 1C           Custom           yes yes yes     42  0

@@ -1,0 +1,38 @@
+\chapter{途中状態と終了時の検査コード}\label{chap:C}
+
+\section{書込み領域と完了通知の検査}
+
+以下はtests/sort/tb\_sort.vの抜粋である。
+
+storeが受理されるたびにcheck\_writeを呼び出す。
+Core1の配列書込み回数と、自分の完了通知回数も数える。
+担当外書込みと早すぎるマージの検出は最終配列の比較とは別に行う。
+
+
+
+\par\medskip\noindent{\small\bfseries コードC1　書込み領域の検査とCore1の受理書込み（tb\_sort.v）}\par\nopagebreak
+
+\lstinputlisting{code/code-13.txt}
+
+\clearpage
+\section{ストール時のPC・レジスタ保持の検査}
+
+\par\medskip\noindent{\small\bfseries コードC2　状態保持の検査（tb\_sort.v）}\par\nopagebreak
+
+\lstinputlisting{code/code-14.txt}
+
+全32レジスタを連結したall\_regsとPCをクロック端の前後で比較する。
+ストール前後の一致を検査するため、図\ref{fig:4}で見えているPC以外の状態更新も検出対象になる。
+
+
+
+\section{完了通知と最終配列の照合}
+
+\par\medskip\noindent{\small\bfseries コードC3　終了条件と64ワードの照合（tb\_sort.v）}\par\nopagebreak
+
+\lstinputlisting{code/code-15.txt}
+
+188〜196行では配列下端0x10FC、上端0x1200、作業領域下端0x12FC、使用した作業領域直後のガードが0のままであることも確認する。
+初期入力のスナップショットと図\ref{fig:5}の表示用フラグは、波形用のtb\_vivado\_sort.vが追加している。
+
+

@@ -1,0 +1,6 @@
+ 38      wire core0_dmem_grant = core0_dmem_req;
+ 39      wire core1_dmem_grant = core1_dmem_req && !core0_dmem_req;
+ 40  
+ 41  
+ 42      assign core0_stall = 1'b0;
+ 43      assign core1_stall = (core1_dmem_req && !core1_dmem_grant);

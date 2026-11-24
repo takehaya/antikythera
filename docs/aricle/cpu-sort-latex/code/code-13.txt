@@ -1,0 +1,31 @@
+ 96      task check_write;
+ 97          input integer core;
+ 98          input [31:0] address;
+ 99          begin
+100              if ((^address) === 1'bx || address[1:0] != 0)
+101                  $fatal(1, "FAIL: core%0d invalid write address %h", core, address);
+102              if (!((address >= 32'h1000 && address <= 32'h100c) ||
+103                    (address >= 32'h1100 && address < 32'h1100 + count*4) ||
+104                    (address >= 32'h1300 && address < 32'h1300 + count*4)))
+105                  $fatal(1, "FAIL: core%0d out-of-bounds write %h", core, address);
+106              if (DUAL && core == 1) begin
+107                  if (ready !== 32'd1)
+108                      $fatal(1, "FAIL: core1 wrote before input initialization");
+109                  if (!(address == 32'h1008 ||
+110                        (address >= 32'h1100+(count/2)*4 && address < 32'h1100+count*4)))
+111                      $fatal(1, "FAIL: core1 wrote outside its half/done flag %h", address);
+112              end
+113              if (DUAL && core == 0 && ready == 1 && left_done == 0 &&
+114                  address >= 32'h1100 && address >= 32'h1100+(count/2)*4)
+115                  $fatal(1, "FAIL: core0 crossed its half before publishing done");
+116              if (DUAL && core == 0 && address >= 32'h1300 &&
+117                  (left_done !== 1 || right_done !== 1))
+118                  $fatal(1, "FAIL: merge started before both halves completed");
+119          end
+     ...
+150              if (req1 && write1 && !stall1) begin
+151                  check_write(1, addr1);
+152                  if (addr1 >= 32'h1100 && addr1 < 32'h1100 + count*4)
+153                      core1_array_stores = core1_array_stores + 1;
+154                  if (addr1 == 32'h1008 && value1 == 1)
+155                      core1_done_publications = core1_done_publications + 1;

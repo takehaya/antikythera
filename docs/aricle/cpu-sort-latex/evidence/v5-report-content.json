@@ -1,0 +1,1368 @@
+{
+  "title": "2コアCPUにおける分割ソートの設計と検証",
+  "author": "早坂（正式氏名未確定）",
+  "revision": 5,
+  "blocks": [
+    {
+      "type": "cover",
+      "title": "2コアCPUにおける\n分割ソートの設計と検証",
+      "subtitle": "共有メモリの調停と完了同期を実コードと波形で確認する",
+      "author": "早坂　（正式な氏名表記は未確定）",
+      "created": "改訂日　2026年10月26日　／　第5版",
+      "pending": "学籍番号、指導教員、提出日：未確定",
+      "abstract": "これまでに作成したCPU、ソートプログラムおよび検証用コードを基に、現行CPUへの統合とXSimによる動作確認、サイクル評価を行った。2コアで配列を分担してソートし、両側の完了後にCore0がマージする。10要素の実行をコードと保存済み波形で追い、同期、共有ポートの競合、最終配列の対応を示す。XSim 2023.1で18入力群を3方式で実行した54条件は、期待値と途中状態の検査を通過した。同じ分割処理を1コアで行う場合に比べ、指定10要素では442から366サイクル、乱数64要素では8,614から5,527サイクルに減少した。初期コピーとマージはCore0に残り、共有ポートの待機もあるため、総サイクル数は半分にはならなかった。",
+      "contents": [
+        "1　検証の目的を示す",
+        "2　CPUの構成と統合内容を示す",
+        "3　検証条件と測定方法を定める",
+        "4　コードと波形から10要素の実行を追う",
+        "5　54条件の結果を比較する",
+        "6　サイクル数の違いを考察する",
+        "7　結論と検証範囲を示す",
+        "付録A　実行プログラム　／　付録B　全条件の結果",
+        "付録C　途中状態と終了時の検査コード"
+      ]
+    },
+    {
+      "type": "heading",
+      "text": "1　検証の目的を示す"
+    },
+    {
+      "type": "paragraph",
+      "text": "2コアで処理を分担するには、計算を二つに分けるだけでなく、同時に発生するメモリアクセスと処理の完了順序を制御する必要がある。本報告では、配列の前半と後半を各コアでバブルソートし、両側の完了後にCore0が二つの整列済み区間をマージする処理を対象とする。"
+    },
+    {
+      "type": "subheading",
+      "text": "1.1　同期の成立とサイクル数を確認する"
+    },
+    {
+      "type": "paragraph",
+      "text": "第一の問いは、共有データポートの競合がある構成で、各コアが担当区間を処理し、自分の完了を通知して正しい最終配列を得られるかである。出力の一致に加え、開始前の書込み、担当外書込み、完了前のマージ、ストール中の状態更新を検査する。"
+    },
+    {
+      "type": "paragraph",
+      "text": "第二の問いは、同じ分割ソートとマージを1コアで順に行う場合と比べ、同期と待機を含む総サイクル数がどのように変わるかである。総数と処理区間の両方から、並行実行で短くなる部分とCore0に残る処理を確認する。"
+    },
+    {
+      "type": "subheading",
+      "text": "1.2　既存実装を検証用の構成へ統合する"
+    },
+    {
+      "type": "paragraph",
+      "text": "これまでに作成したCPU、ソートプログラムおよび検証用コードを基に、現行CPUへの統合とXSimによる検証を行った。表1の既存機構を引き継ぎ、入力ROMの読出しとコアIDの互換アドレスを追加した。本報告で示す成果は、この構成での動作確認とサイクル比較である。新しいソートアルゴリズムの提案を目的とするものではない。"
+    },
+    {
+      "type": "table",
+      "caption": "表1　既存の実装と今回の統合、検証の範囲",
+      "headers": [
+        "区分",
+        "内容",
+        "今回の扱い"
+      ],
+      "widths": [
+        66,
+        215,
+        218.2756
+      ],
+      "rows": [
+        [
+          "既存",
+          "独立した命令フェッチ、Core0優先の調停、ストール時のPCとレジスタ保持",
+          "機構を維持し、ソート実行中の動作を確認"
+        ],
+        [
+          "既存",
+          "CPU、ソート生成器、テストベンチ",
+          "これまでのソート生成器と検証コードを現行CPUに組み合わせる"
+        ],
+        [
+          "統合",
+          "ROMのデータ読出し、ROM宛て書込みの抑止、coreIDの0x1FFC別名",
+          "CPUと調停器の2ファイルを変更"
+        ],
+        [
+          "検証",
+          "54条件の比較、6件の波形デモ、4件の追加検証、期待値不一致の負例",
+          "既存ログと波形を本報告の根拠として対応付け"
+        ]
+      ],
+      "font_size": 9.3,
+      "padding": 8
+    },
+    {
+      "type": "paragraph",
+      "text": "実装の版、実ファイルと結果の参照先を7.3節に示す。第三者のツール資料は参考資料として区別し、合成やFPGA実機で未確認の動作を成果に含めない。"
+    },
+    {
+      "type": "pagebreak"
+    },
+    {
+      "type": "heading",
+      "text": "2　CPUの構成と統合内容を示す"
+    },
+    {
+      "type": "subheading",
+      "text": "2.1　独立した命令フェッチと共有データポートを使う"
+    },
+    {
+      "type": "paragraph",
+      "text": "各コアはPCと32本の32ビットレジスタを持ち、同じプログラムを実行する。命令はそれぞれのPCから独立に読む。データアクセスは調停器へ集まり、Core0を優先して一方の要求を許可する。Core1は競合中にPCとレジスタを保持する。"
+    },
+    {
+      "type": "diagram",
+      "name": "architecture",
+      "height": 415,
+      "caption": "図1　CPUとメモリの接続。双方向矢印は要求と応答の往復を表す。coreIDは各CPU内で返すため、共有データポートを使わない。"
+    },
+    {
+      "type": "paragraph",
+      "text": "命令用のinst_memoryは一つの配列を二つのPCで読み出す。追加したデータ読出し用のdata_imageは、同じMEM_FILEを初期値として持つ別インスタンスである。調停後のアドレスが0x1000未満なら入力ROMの値を返し、それ以外ならRAMへ接続する。"
+    },
+    {
+      "type": "paragraph",
+      "text": "RAMは4,096ワード、計16 KiBである。読出しは非同期、書込みはクロックの立上りで行う。このメモリ構成をFPGA資源へどう対応させるかは、今回のRTLシミュレーションとは別の検討事項である。"
+    },
+    {
+      "type": "pagebreak"
+    },
+    {
+      "type": "subheading",
+      "text": "2.2　入力、フラグ、配列を別の領域へ置く"
+    },
+    {
+      "type": "table",
+      "caption": "表2　プログラムが使うメモリ領域",
+      "headers": [
+        "アドレス",
+        "内容",
+        "アクセスする主体"
+      ],
+      "widths": [
+        142,
+        169,
+        188.2756
+      ],
+      "rows": [
+        [
+          "0x0000〜0x07FF",
+          "プログラム",
+          "両コアの命令フェッチ"
+        ],
+        [
+          "0x0800〜0x08FF",
+          "入力ROM　最大64要素",
+          "Core0がlwで初期コピー"
+        ],
+        [
+          "0x1000",
+          "READY",
+          "Core0が1を書き、Core1が読む"
+        ],
+        [
+          "0x1004 / 0x1008",
+          "LEFT_DONE / RIGHT_DONE",
+          "各担当コアが1を書く"
+        ],
+        [
+          "0x100C",
+          "COMPLETE",
+          "Core0が1を書き、Core1が読む"
+        ],
+        [
+          "0x1100〜0x11FF",
+          "配列　最大64ワード",
+          "分担ソートと結果の書戻し"
+        ],
+        [
+          "0x1300〜0x13FF",
+          "マージ用作業領域",
+          "Core0"
+        ],
+        [
+          "0x1FFC / 0x3000",
+          "coreID　値は0または1",
+          "各CPU内で応答"
+        ]
+      ],
+      "font_size": 9.1,
+      "padding": 9
+    },
+    {
+      "type": "paragraph",
+      "text": "0x1000未満の入力ROMをlwで取得できるよう、コード1の選択信号でRAMへのアクセスを抑止する。ROM宛てのstoreもRAMへ伝えない。読出し値は同じ選択信号でROMまたはRAMから選ぶ。"
+    },
+    {
+      "type": "code",
+      "caption": "コード1　ROMの判定とRAMアクセスの抑止　simple_memory_arbiter.v",
+      "source": "antikythera.srcs/source_1/new/simple_memory_arbiter.v",
+      "source_lines": [
+        55,
+        56,
+        57,
+        58,
+        59,
+        60,
+        61,
+        62,
+        63,
+        87,
+        88
+      ],
+      "text": " 55      wire [31:0] dmem_read_data;\n 56      wire [31:0] rom_data_read;\n 57      wire data_address_is_rom = (dmem_addr_mux < 32'h00001000);\n 58      wire [31:0] shared_read_data = data_address_is_rom ? rom_data_read : dmem_read_data;\n 59  \n 60      DataMemory data_memory (\n 61          .clk(clk),\n 62          .MemWrite(dmem_write_granted && !data_address_is_rom),\n 63          .MemRead(dmem_read_granted && !data_address_is_rom),\n     ...\n 87      assign core0_dmem_read_data = core0_dmem_grant ? shared_read_data : 32'h0;\n 88      assign core1_dmem_read_data = core1_dmem_grant ? shared_read_data : 32'h0;",
+      "retain_comments": false,
+      "font_size": 8.8
+    },
+    {
+      "type": "paragraph",
+      "text": "プログラムは0x1FFCでコアIDを読む。コード2では、従来の0x3000と同じCPU内部応答へ接続した。両アドレスへのアクセスは共有データ要求を出さず、storeは無視する。"
+    },
+    {
+      "type": "code",
+      "caption": "コード2　コアIDの別名とデータ要求　simple_cpu_with_mem_interface.v",
+      "source": "antikythera.srcs/source_1/new/simple_cpu_with_mem_interface.v",
+      "source_lines": [
+        150,
+        151,
+        152,
+        156,
+        157,
+        158,
+        159,
+        160,
+        170
+      ],
+      "text": "150      wire core_id_access = (ALUResult == 32'h00003000) ||\n151                            (ALUResult == 32'h00001ffc);\n152      wire is_core_id_read = MemRead && core_id_access;\n     ...\n156          if ((MemRead || MemWrite) && !core_id_access) begin\n157              dmem_req = 1'b1;\n158              dmem_write = MemWrite;\n159              dmem_addr = ALUResult;\n160              dmem_write_data = regData2;\n     ...\n170      wire [31:0] unifiedMemReadData = is_core_id_read ? CORE_ID : dmem_read_data;",
+      "retain_comments": false,
+      "font_size": 8.8
+    },
+    {
+      "type": "paragraph",
+      "text": "本文と付録の行番号は参照元の実ファイルに対応する。離れた範囲を抜粋した箇所は...で示し、本文コードでは説明用コメントを省略した。命令のPCと機械語を含む一覧は付録Aに置く。"
+    },
+    {
+      "type": "pagebreak"
+    },
+    {
+      "type": "heading",
+      "text": "3　検証条件と測定方法を定める"
+    },
+    {
+      "type": "subheading",
+      "text": "3.1　同じ処理を1コアと2コアで実行する"
+    },
+    {
+      "type": "paragraph",
+      "text": "実行記録はXSim 2023.1（64-bit、SW Build 3865809）のbehavioral simulationである。xvlog、xelab、xsimの順に実行し、テストベンチのクロック周期は10 nsとした。符号なし32ビット値を扱い、RAMとレジスタをinitial処理で初期化して起動する。このCPUは分岐遅延スロットを持たず、jalはPC+4を保存する。"
+    },
+    {
+      "type": "table",
+      "caption": "表3　比較する処理とCPU構成",
+      "headers": [
+        "方式",
+        "ソートとマージ",
+        "CPU構成"
+      ],
+      "widths": [
+        92,
+        247,
+        160.2756
+      ],
+      "rows": [
+        [
+          "dual",
+          "二つの区間を並行してソートし、Core0がマージ",
+          "同じCPUを2コア接続"
+        ],
+        [
+          "serial_split",
+          "二つの区間を順にソートし、同じマージを行う",
+          "同じCPUを1コア使用"
+        ],
+        [
+          "serial_full",
+          "配列全体を一度にソートし、マージしない",
+          "同じCPUを1コア使用"
+        ]
+      ],
+      "font_size": 9.3,
+      "padding": 9
+    },
+    {
+      "type": "paragraph",
+      "text": "主比較はserial_splitとdualである。1コア条件も同じCPUと調停器を使い、第2の要求元を0に固定する。入力と分割ソート、マージの処理をそろえ、同期と待機を含めて比較する。serial_fullは全体を一度にソートしてマージしないため、アルゴリズムの構成が異なる参考条件とする。"
+    },
+    {
+      "type": "subheading",
+      "text": "3.2　入力群と測定区間を固定する"
+    },
+    {
+      "type": "paragraph",
+      "text": "長さ0、1、2、3、7、9、10、16、17、32、64から18入力群を選び、各3方式で計54条件を実行した。空配列、単要素、整列済み、逆順、重複、同値、符号なし32ビットの境界値、固定した乱数配列を含む。全条件の内訳と結果は付録Bに示す。全ての長さや全入力値を網羅しておらず、乱数配列も各長さで一つの固定入力である。"
+    },
+    {
+      "type": "paragraph",
+      "text": "総サイクル数cyclesは、リセット解除から参加するコアが終端ループへ到達するまでとする。入力コピー、初期化、ソート、待機、マージ、書き戻しを含む。READY、左右の完了、COMPLETEの初回観測サイクルも記録する。クロック周期10 nsはシミュレーションの設定であり、実機の動作周波数を実証した値ではない。"
+    },
+    {
+      "type": "subheading",
+      "text": "3.3　途中状態と終了時の配列を検査する"
+    },
+    {
+      "type": "paragraph",
+      "text": "テストベンチはPCと受理されたstoreアドレスの未知値や非整列、担当外書込み、READY前のCore1書込み、両側完了前のマージ、完了通知の代行を検出する。ストール時はPCと全32レジスタを比較し、終了時は配列領域の64ワードと境界のガードを期待値に照合する。全てのloadアドレスを検査するものではない。検査コードは付録Cに示す。"
+    },
+    {
+      "type": "paragraph",
+      "text": "CPUに初期化から実行させ、DUTのPC、RAM、レジスタ、完了フラグへ値を直接注入して成功状態を作らない。波形用テストベンチはこれらの検査に加え、入力コピー完了時と最終配列のスナップショットを保存する。"
+    },
+    {
+      "type": "pagebreak"
+    },
+    {
+      "type": "heading",
+      "text": "4　コードと波形から10要素の実行を追う"
+    },
+    {
+      "type": "subheading",
+      "text": "4.1　入力をコピーして開始を知らせる"
+    },
+    {
+      "type": "paragraph",
+      "text": "指定入力は7, 1, 4, 9, 3, 8, 2, 6, 5, 0である。Core0は前半5要素、Core1は後半5要素を担当する。図2に処理順を示す。READYが立つまでCore1を待たせ、入力コピーの途中でソートが始まらないようにする。"
+    },
+    {
+      "type": "diagram",
+      "name": "synchronization",
+      "height": 316,
+      "caption": "図2　開始通知、担当区間のソート、完了通知、マージの順序。フラグの1への更新は処理の担当コアが行う。"
+    },
+    {
+      "type": "code",
+      "caption": "コード3　ROMからのコピーと前半ソート　listing.s",
+      "source": "research/cases/original_ten/dual/listing.s",
+      "source_lines": [
+        12,
+        13,
+        14,
+        15,
+        16,
+        17,
+        18,
+        19,
+        20
+      ],
+      "text": " 12      addiu  $a0, $zero, 2048\n 13      addiu  $a1, $zero, 4352\n 14      addiu  $a2, $zero, 10\n 15      jal    copy_words\n 16      addiu  $t0, $zero, 1\n 17      sw     $t0, 4096($zero)\n 18      addiu  $a0, $zero, 4352\n 19      addiu  $a1, $zero, 5\n 20      jal    bubble_sort",
+      "retain_comments": false,
+      "font_size": 8.8
+    },
+    {
+      "type": "paragraph",
+      "text": "コード3の2048は0x0800、4352は0x1100である。Core0はROMからRAMへ10要素をコピーしてから、17行目でREADYに1を書く。続く呼出しは前半5要素のソートである。フラグの初期クリアとCore1側の入口は付録Aの8〜11行、31〜43行に示す。"
+    },
+    {
+      "type": "pagebreak"
+    },
+    {
+      "type": "subheading",
+      "text": "4.2　両側の完了を待ってからマージへ進む"
+    },
+    {
+      "type": "code",
+      "caption": "コード4　左側完了の通知と右側完了の待機　listing.s",
+      "source": "research/cases/original_ten/dual/listing.s",
+      "source_lines": [
+        21,
+        22,
+        23,
+        24,
+        25,
+        26,
+        38,
+        39,
+        40,
+        41,
+        42
+      ],
+      "text": " 21      addiu  $t0, $zero, 1\n 22      sw     $t0, 4100($zero)\n 23  wait_right:\n 24      lw     $t0, 4104($zero)\n 25      beq    $t0, $zero, wait_right\n 26      jal    merge_halves\n     ...\n 38      addiu  $t0, $zero, 1\n 39      sw     $t0, 4104($zero)\n 40  wait_complete:\n 41      lw     $t0, 4108($zero)\n 42      beq    $t0, $zero, wait_complete",
+      "retain_comments": false,
+      "font_size": 8.8
+    },
+    {
+      "type": "paragraph",
+      "text": "Core0はLEFT_DONEへ1を書いた後、RIGHT_DONEを繰り返し読む。Core1は自分のソートが終わるとRIGHT_DONEへ1を書き、その後はCOMPLETEを待つ。固定時間の遅延ではなく、各処理の完了を次の処理の開始条件にしている。"
+    },
+    {
+      "type": "figure",
+      "kind": "synchronization",
+      "caption": "図3　10要素dual実行の完了フラグ。上下は同じ実行の前半と後半で、信号名を繰り返した。Value列は最終カーソル時点の値。横軸nsとリセット解除基準のcyclesは原点が異なる。",
+      "caption_md": "図3　10要素dual実行の完了フラグ。元の横長波形を掲載する。PDFでは読みやすさのため同じ画像を前半と後半に分けている。Value列は最終カーソル時点の値で、横軸nsとcyclesは原点が異なる。"
+    },
+    {
+      "type": "table",
+      "caption": "表4　図3に対応する初回観測サイクル",
+      "headers": [
+        "READY",
+        "LEFT_DONE",
+        "RIGHT_DONE",
+        "COMPLETE",
+        "参加コア終端"
+      ],
+      "widths": [
+        90,
+        104,
+        104,
+        101,
+        100.2756
+      ],
+      "rows": [
+        [
+          "74",
+          "168",
+          "188",
+          "363",
+          "366"
+        ]
+      ],
+      "font_size": 9.0,
+      "padding": 7
+    },
+    {
+      "type": "paragraph",
+      "text": "図3ではREADY、LEFT_DONE、RIGHT_DONE、COMPLETEの順に変化する。表4の188から363までには、右側完了の確認、マージ、書き戻し、完了の公開が含まれる。COMPLETEの後もCore1の確認と終端到達が残り、総数は366サイクルとなる。"
+    },
+    {
+      "type": "paragraph",
+      "text": "この実行でCore1の受理された配列storeは16回、自分の完了通知は1回だった。担当区間と通知主体は付録Cの検査で確認した。完了フラグに加え、Core1自身の処理をこの記録から確かめられる。"
+    },
+    {
+      "type": "pagebreak"
+    },
+    {
+      "type": "subheading",
+      "text": "4.3　同時要求時のPC保持と再開を読む"
+    },
+    {
+      "type": "code",
+      "caption": "コード5a　Core0優先の調停とストール　simple_memory_arbiter.v",
+      "source": "antikythera.srcs/source_1/new/simple_memory_arbiter.v",
+      "source_lines": [
+        38,
+        39,
+        40,
+        41,
+        42,
+        43
+      ],
+      "text": " 38      wire core0_dmem_grant = core0_dmem_req;\n 39      wire core1_dmem_grant = core1_dmem_req && !core0_dmem_req;\n 40  \n 41  \n 42      assign core0_stall = 1'b0;\n 43      assign core1_stall = (core1_dmem_req && !core1_dmem_grant);",
+      "retain_comments": false,
+      "font_size": 8.8
+    },
+    {
+      "type": "paragraph",
+      "text": "req0とreq1が同時に1になると、Core0が許可され、Core1のstall1が1になる。CPU側ではRegWriteを!stallで抑止し、PCも!stallのときだけ更新する。この機構は既存のCPUから維持した部分である。"
+    },
+    {
+      "type": "code",
+      "caption": "コード5b　レジスタ書込みとPC更新の抑止　simple_cpu_with_mem_interface.v",
+      "source": "antikythera.srcs/source_1/new/simple_cpu_with_mem_interface.v",
+      "source_lines": [
+        62,
+        93,
+        94,
+        95,
+        195,
+        196,
+        197,
+        198,
+        199,
+        200,
+        201
+      ],
+      "text": " 62      wire RegWriteGated = RegWrite && !stall;\n     ...\n 93      Register rf(\n 94          .clk(clk),\n 95          .RegWrite(RegWriteGated),\n     ...\n195      always @(posedge clk or posedge reset) begin\n196          if(reset)\n197              PC <= 0;\n198          else if (!stall)\n199              PC <= PCnext;\n200  \n201      end",
+      "retain_comments": false,
+      "font_size": 8.8
+    },
+    {
+      "type": "code",
+      "caption": "コード6　隣接要素の比較と交換　listing.s",
+      "source": "research/cases/original_ten/dual/listing.s",
+      "source_lines": [
+        70,
+        71,
+        72,
+        73,
+        74,
+        75
+      ],
+      "text": " 70      lw     $t2, 0($t1)\n 71      lw     $t3, 4($t1)\n 72      slt    $t4, $t3, $t2\n 73      beq    $t4, $zero, bubble_no_swap\n 74      sw     $t3, 0($t1)\n 75      sw     $t2, 4($t1)",
+      "retain_comments": false,
+      "font_size": 8.8
+    },
+    {
+      "type": "paragraph",
+      "text": "このCPUのsltは符号なし比較である。後側の値が小さい場合に、74〜75行で二つの要素を交換する。"
+    },
+    {
+      "type": "figure",
+      "kind": "contention",
+      "caption": "図4　1085.4 ns付近の同時要求。req0、req1、stall1が1で、PC0は0xC8、PC1は0xD4を示す。Core1のPCは競合区間をまたいで保持され、待機解除後に0xD8へ進む。"
+    },
+    {
+      "type": "paragraph",
+      "text": "付録AのPC注記と照合すると、0xC8はコード6の71行目のload、0xD4は74行目の最初のstoreである。図4ではCore1のPCが1075〜1095 nsの競合区間をまたいで0xD4に留まる。再開後の0xD8は75行目の次のstoreに対応する。"
+    },
+    {
+      "type": "paragraph",
+      "text": "この実行のCore1ストールは計77サイクルだった。図で直接読めるPCに加え、テストベンチはストールしたクロック端の前後で全32レジスタも照合した（付録C2）。図4の1区間だけで全実行の保持を証明するのではなく、波形で動作例を読み、検査で実行全体を確認する。"
+    },
+    {
+      "type": "pagebreak"
+    },
+    {
+      "type": "subheading",
+      "text": "4.4　マージと最終配列の検査を対応付ける"
+    },
+    {
+      "type": "paragraph",
+      "text": "両側の完了後、Core0は整列済み区間の先頭を比較し、小さい値を0x1300からの作業領域へ書く。同値では左側を選ぶ。一方の区間を使い切ったら残りを転送し、作業領域の10要素を0x1100へ書き戻す。付録Aに分岐と残り要素の処理を含む一覧を示す。"
+    },
+    {
+      "type": "code",
+      "caption": "コード7　マージの比較と最後の書き戻し　listing.s",
+      "source": "research/cases/original_ten/dual/listing.s",
+      "source_lines": [
+        93,
+        94,
+        95,
+        96,
+        97,
+        98,
+        99,
+        120,
+        121,
+        122,
+        123,
+        124
+      ],
+      "text": " 93      lw     $t5, 0($t0)\n 94      lw     $t6, 0($t2)\n 95      slt    $t7, $t6, $t5\n 96      bne    $t7, $zero, merge_take_right\n 97      sw     $t5, 0($t4)\n 98      addiu  $t0, $t0, 4\n 99      addiu  $t4, $t4, 4\n     ...\n120  merge_copy_back:\n121      addiu  $a0, $zero, 4864\n122      addiu  $a1, $zero, 4352\n123      addiu  $a2, $zero, 10\n124      j      copy_words",
+      "retain_comments": false,
+      "font_size": 8.8
+    },
+    {
+      "type": "figure",
+      "kind": "correctness",
+      "caption": "図5　最終スナップショット。final_00〜final_09は0〜9、cyclesは366。initial_validは入力コピーの照合、final_validは最終値の取得、passedは検査通過を示す。",
+      "note": "入力\n7,1,4,9,3,8,2,6,5,0\n\n出力\n0,1,2,3,4,5,6,7,8,9\n\nCore1の受理された配列storeは16回。自分の完了通知は1回だった。"
+    },
+    {
+      "type": "code",
+      "caption": "コード8　保存した最終値と検査通過の公開　tb_vivado_sort.v",
+      "source": "research/sim/tb_vivado_sort.v",
+      "source_lines": [
+        222,
+        223,
+        224,
+        225,
+        226
+      ],
+      "text": "222          for (snapshot_index = 0; snapshot_index < 64; snapshot_index = snapshot_index + 1)\n223              final_values[snapshot_index] = array_words[snapshot_index];\n224          final_valid = 1;\n225          if (!initial_valid) $fatal(1, \"FAIL: READY input snapshot missing\");\n226          passed = 1;",
+      "retain_comments": false,
+      "font_size": 8.8
+    },
+    {
+      "type": "paragraph",
+      "text": "図5は同じten-dual-v2実行の保存済みWDBから表示した実画面である。final_validだけで正しさを判断せず、前段の期待値照合とpassedを合わせて読む。左右の整列直後の配列を個別に撮影した結果は、本報告では示していない。"
+    },
+    {
+      "type": "pagebreak"
+    },
+    {
+      "type": "heading",
+      "text": "5　54条件の結果を比較する"
+    },
+    {
+      "type": "subheading",
+      "text": "5.1　全条件が期待値と途中状態の検査を通過した"
+    },
+    {
+      "type": "paragraph",
+      "text": "18入力群の3方式、計54条件で期待値に一致し、3.3節の検査を通過した。各条件のPASS行と終了コード0を照合した結果を付録Bにまとめる。図3〜5はそのうち指定10要素dualと同じ条件を波形付きで実行したものである。"
+    },
+    {
+      "type": "paragraph",
+      "text": "指定10要素と乱数64要素の各3方式による6件の波形デモ、およびコアID、既存マルチコア動作、ROM読出し競合、メモリ配置の4件の追加検証も通過した。これらは54条件とは別の実行記録で、デモの入力は主検証と重複する。"
+    },
+    {
+      "type": "paragraph",
+      "text": "誤った期待値を与えた負例は、array[0]の期待値0xFFFFFFFFに対して実値0x00000000という不一致を検出し、終了コード1で停止した。この負例は期待値比較が働くことを示すが、検査器の全ての異常検出経路を網羅したものではない。"
+    },
+    {
+      "type": "subheading",
+      "text": "5.2　同じ分割処理の総サイクル数を比べる"
+    },
+    {
+      "type": "table",
+      "caption": "表5　代表入力の総サイクル数",
+      "headers": [
+        "入力",
+        "serial_split",
+        "dual",
+        "split/dual",
+        "参考 serial_full"
+      ],
+      "widths": [
+        75,
+        108,
+        85,
+        95,
+        136.2756
+      ],
+      "rows": [
+        [
+          "指定10",
+          "442",
+          "366",
+          "1.21",
+          "441"
+        ],
+        [
+          "乱数7",
+          "281",
+          "260",
+          "1.08",
+          "230"
+        ],
+        [
+          "乱数17",
+          "923",
+          "733",
+          "1.26",
+          "1,164"
+        ],
+        [
+          "乱数32",
+          "2,513",
+          "1,772",
+          "1.42",
+          "3,763"
+        ],
+        [
+          "乱数64",
+          "8,614",
+          "5,527",
+          "1.56",
+          "14,803"
+        ]
+      ],
+      "font_size": 9.0,
+      "padding": 9
+    },
+    {
+      "type": "paragraph",
+      "text": "指定10要素では442から366サイクルへ減少し、比率は1.21だった。固定した乱数入力7、17、32、64要素では、比率は1.08、1.26、1.42、1.56となった。選定例では大きい入力ほど差が広がったが、長さごとに配列が異なるため、規模だけの効果には分離できない。"
+    },
+    {
+      "type": "paragraph",
+      "text": "参考条件のserial_fullは7要素で230サイクルとなり、dualの260より短い。小さい入力では、分割とマージを追加するコストが結果へ現れる。serial_fullとdualの比率には処理量の構成差も入るため、コア数だけの効果を示す値としては扱わない。"
+    },
+    {
+      "type": "pagebreak"
+    },
+    {
+      "type": "heading",
+      "text": "6　サイクル数の違いを考察する"
+    },
+    {
+      "type": "subheading",
+      "text": "6.1　並行ソート区間で差が生じる"
+    },
+    {
+      "type": "paragraph",
+      "text": "乱数64要素ではserial_splitの8,614サイクルに対してdualは5,527サイクルで、総数は35.8%減少した。表6は完了カウンタの差から求めた区間長である。READYまでの398サイクルは同じで、差の主要部分はREADYから両側ソート完了までにある。"
+    },
+    {
+      "type": "table",
+      "caption": "表6　乱数64要素のイベント間サイクル数",
+      "headers": [
+        "観測区間",
+        "serial_split",
+        "dual"
+      ],
+      "widths": [
+        283,
+        108,
+        108.2756
+      ],
+      "rows": [
+        [
+          "開始からREADY",
+          "398",
+          "398"
+        ],
+        [
+          "READYから両側ソート完了",
+          "7,178",
+          "4,087"
+        ],
+        [
+          "両側完了からCOMPLETE",
+          "1,037",
+          "1,039"
+        ],
+        [
+          "COMPLETEから参加コア終端",
+          "1",
+          "3"
+        ],
+        [
+          "総サイクル数",
+          "8,614",
+          "5,527"
+        ]
+      ],
+      "font_size": 9.3,
+      "padding": 9
+    },
+    {
+      "type": "paragraph",
+      "text": "両側ソートの完了後にも約1,040サイクルが残る。初期コピーとマージ、書き戻しはCore0が行い、並行ソート中には共有ポートの待機もある。この構成では総サイクル数が単純に半分になるわけではない。イベント間の差にはポーリングと完了通知も含まれる。"
+    },
+    {
+      "type": "subheading",
+      "text": "6.2　交換回数だけでは総数を説明できない"
+    },
+    {
+      "type": "table",
+      "caption": "表7　64要素の2コア実行を入力別に比較",
+      "headers": [
+        "入力",
+        "総数",
+        "両側完了\nの時点",
+        "両側完了から\nCOMPLETE",
+        "Core1\nストール"
+      ],
+      "widths": [
+        79,
+        80,
+        109,
+        133,
+        98.2756
+      ],
+      "rows": [
+        [
+          "整列",
+          "4,398",
+          "3,481",
+          "914",
+          "388"
+        ],
+        [
+          "逆順",
+          "5,391",
+          "4,473",
+          "915",
+          "389"
+        ],
+        [
+          "乱数",
+          "5,527",
+          "4,485",
+          "1,039",
+          "925"
+        ]
+      ],
+      "font_size": 9.3,
+      "padding": 9
+    },
+    {
+      "type": "paragraph",
+      "text": "乱数64要素は逆順64要素より136サイクル長い。両側完了の時点は4,485と4,473で差は12、両側完了からCOMPLETEまでは1,039と915で差は124となる。差の大半は後段に現れており、ストール数だけでは総数を説明できない。"
+    },
+    {
+      "type": "paragraph",
+      "text": "マージは二列の値の並びによって比較と残り要素の転送が変わるため、この結果は実装と整合する。ただし後段にはフラグの確認と公開も含まれ、124サイクル全てを特定の命令処理へ帰属させた値ではない。Core1のストール数も、そのまま総時間への追加コストとはみなせない。"
+    },
+    {
+      "type": "paragraph",
+      "text": "整列済み入力でも比較走査を続ける実装のため、4,398サイクルを要した。Core1の配列storeは整列で0回、逆順で992回、乱数で468回だったが、総数は乱数が最も長い。ソート中の交換回数に加え、待機と後段処理を含む総数を見る必要がある。"
+    },
+    {
+      "type": "pagebreak"
+    },
+    {
+      "type": "heading",
+      "text": "7　結論と検証範囲を示す"
+    },
+    {
+      "type": "subheading",
+      "text": "7.1　二つの問いに対する結果をまとめる"
+    },
+    {
+      "type": "paragraph",
+      "text": "第一の問いに対し、選定した18入力群では、2コアが担当区間を処理し、完了通知を経てCore0がマージする動作が成立した。54条件は期待値と途中状態の検査を通過した。10要素の実波形では、完了フラグの順序、同時要求時のPC保持と再開、最終配列の一致をコードへ対応付けて確認した。"
+    },
+    {
+      "type": "paragraph",
+      "text": "第二の問いに対し、同じ分割処理の1コア実行と比べ、指定10要素では442から366、乱数64要素では8,614から5,527サイクルへ減少した。乱数64要素の差は主に並行ソート区間に現れた。初期コピー、マージ、書き戻しはCore0に残り、共有ポートの待機もあるため、総数は半分にはならなかった。"
+    },
+    {
+      "type": "subheading",
+      "text": "7.2　未確認の範囲を区別する"
+    },
+    {
+      "type": "paragraph",
+      "text": "確認したのは、符号なし32ビット値、初期化された状態からの起動、選定入力でのRTL動作である。前回のフラグが残る再起動、64要素を超える入力、Core0固定優先による長時間の待機は未検証である。乱数入力の複数種による統計的な評価や、検査器の網羅性を示すカバレッジ測定も行っていない。"
+    },
+    {
+      "type": "paragraph",
+      "text": "合成、配置配線、FPGA実機測定は行っていない。サイクル数の比を実機の速度倍率とはしない。非同期読出しメモリの実装方法、資源量、最大動作周波数は別途評価が必要である。準備済みの2024.1用XPRとGUI Tclについても、同版での実行を確認した成果には含めない。"
+    },
+    {
+      "type": "subheading",
+      "text": "7.3　対象版と資料を参照する"
+    },
+    {
+      "type": "paragraph",
+      "text": "原本はtakehaya/antikytheraで、HEAD 8b61da20522f5bfcb01908f2342abfea7676bb25に未コミット変更を含む保存状態を出発点とした。そこから作成した検証用統合版が本報告の対象であり、HEADだけでは同じ版を再現できない。参照した19ファイルの一覧とSHA-256をsource-manifest.jsonに記録した。集合の識別子の先頭16桁は62eb51779b0c0173である。"
+    },
+    {
+      "type": "table",
+      "caption": "表8　本文の根拠と保存資料",
+      "headers": [
+        "根拠",
+        "保存資料"
+      ],
+      "widths": [
+        170,
+        329.2756
+      ],
+      "rows": [
+        [
+          "実装と命令",
+          "work/内のRTL、tests/sort/build_programs.py、research/cases/original_ten/dual/listing.s"
+        ],
+        [
+          "54条件の数値",
+          "report/xsim-results.csv、runs/matrix-*/simulate.logと終了記録"
+        ],
+        [
+          "図3〜5の実画面",
+          "runs/ten-dual-v2/evidence.wdb、report/gui-captures-20261011/内の撮影原本と切出し記録"
+        ],
+        [
+          "途中状態の検査",
+          "tests/sort/tb_sort.v、research/sim/tb_vivado_sort.v"
+        ]
+      ],
+      "font_size": 9.0,
+      "padding": 7
+    },
+    {
+      "type": "references",
+      "items": [
+        "参考資料　takehaya/antikythera：https://github.com/takehaya/antikythera",
+        "AMD, Vivado Design Suite User Guide: Logic Simulation (UG900), 2020.2, Using the launch_simulation Command.\nhttps://docs.amd.com/r/2020.2-English/ug900-vivado-logic-simulation/Using-the-launch_simulation-Command",
+        "AMD, Vivado Design Suite Tcl Command Reference Guide (UG835), 2020.2, open_wave_database.\nhttps://docs.amd.com/r/2020.2-English/ug835-vivado-tcl-commands/open_wave_database",
+        "上記のツール操作資料は既存READMEの参照先を保持したもので、実行結果のツール版2023.1とは区別する。"
+      ]
+    },
+    {
+      "type": "pagebreak"
+    },
+    {
+      "type": "heading",
+      "text": "付録A　10要素dualの実行プログラム"
+    },
+    {
+      "type": "paragraph",
+      "text": "research/cases/original_ten/dual/listing.sの実ファイルを行番号付きで掲載する。右側の注記は命令のPCと機械語である。図4のPCをこの一覧へ対応付けられる。長いコメントは紙面内で折り返す。"
+    },
+    {
+      "type": "code",
+      "caption": "コードA1　起動、分担、完了待機（1〜45行）",
+      "source": "research/cases/original_ten/dual/listing.s",
+      "source_lines": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16,
+        17,
+        18,
+        19,
+        20,
+        21,
+        22,
+        23,
+        24,
+        25,
+        26,
+        27,
+        28,
+        29,
+        30,
+        31,
+        32,
+        33,
+        34,
+        35,
+        36,
+        37,
+        38,
+        39,
+        40,
+        41,
+        42,
+        43,
+        44,
+        45
+      ],
+      "text": "  1  # Mode: dual; count=10; split=5/5; UNSIGNED32\n  2  # Target-specific SLT is unsigned; NO branch/jump delay slots; JAL saves PC+4.\n  3  # All addresses are bytes. READY must initially be zero before releasing cores.\n  4  _start:\n  5      lw     $s0, 8188($zero)                # 0000: 8c101ffc\n  6      bne    $s0, $zero, secondary           # 0004: 16000015\n  7  # Core 0 owns initialization, input copy, merge, and COMPLETE publication.\n  8      sw     $zero, 4096($zero)              # 0008: ac001000\n  9      sw     $zero, 4100($zero)              # 000c: ac001004\n 10      sw     $zero, 4104($zero)              # 0010: ac001008\n 11      sw     $zero, 4108($zero)              # 0014: ac00100c\n 12      addiu  $a0, $zero, 2048                # 0018: 24040800\n 13      addiu  $a1, $zero, 4352                # 001c: 24051100\n 14      addiu  $a2, $zero, 10                  # 0020: 2406000a\n 15      jal    copy_words                      # 0024: 0c000022\n 16      addiu  $t0, $zero, 1                   # 0028: 24080001\n 17      sw     $t0, 4096($zero)                # 002c: ac081000\n 18      addiu  $a0, $zero, 4352                # 0030: 24041100\n 19      addiu  $a1, $zero, 5                   # 0034: 24050005\n 20      jal    bubble_sort                     # 0038: 0c00002a\n 21      addiu  $t0, $zero, 1                   # 003c: 24080001\n 22      sw     $t0, 4100($zero)                # 0040: ac081004\n 23  wait_right:\n 24      lw     $t0, 4104($zero)                # 0044: 8c081008\n 25      beq    $t0, $zero, wait_right          # 0048: 1100fffe\n 26      jal    merge_halves                    # 004c: 0c00003c\n 27  publish_complete:\n 28      addiu  $t0, $zero, 1                   # 0050: 24080001\n 29      sw     $t0, 4108($zero)                # 0054: ac08100c\n 30      j      halt                            # 0058: 08000021\n 31  secondary:\n 32  wait_ready:\n 33      lw     $t0, 4096($zero)                # 005c: 8c081000\n 34      beq    $t0, $zero, wait_ready          # 0060: 1100fffe\n 35      addiu  $a0, $zero, 4372                # 0064: 24041114\n 36      addiu  $a1, $zero, 5                   # 0068: 24050005\n 37      jal    bubble_sort                     # 006c: 0c00002a\n 38      addiu  $t0, $zero, 1                   # 0070: 24080001\n 39      sw     $t0, 4104($zero)                # 0074: ac081008\n 40  wait_complete:\n 41      lw     $t0, 4108($zero)                # 0078: 8c08100c\n 42      beq    $t0, $zero, wait_complete       # 007c: 1100fffe\n 43      j      halt                            # 0080: 08000021\n 44  halt:\n 45      j      halt                            # 0084: 08000021",
+      "retain_comments": true,
+      "font_size": 8.8
+    },
+    {
+      "type": "pagebreak"
+    },
+    {
+      "type": "heading",
+      "text": "付録A　コピーとバブルソートを読む"
+    },
+    {
+      "type": "code",
+      "caption": "コードA2　コピー、比較交換、マージの入口（46〜89行）",
+      "source": "research/cases/original_ten/dual/listing.s",
+      "source_lines": [
+        46,
+        47,
+        48,
+        49,
+        50,
+        51,
+        52,
+        53,
+        54,
+        55,
+        56,
+        57,
+        58,
+        59,
+        60,
+        61,
+        62,
+        63,
+        64,
+        65,
+        66,
+        67,
+        68,
+        69,
+        70,
+        71,
+        72,
+        73,
+        74,
+        75,
+        76,
+        77,
+        78,
+        79,
+        80,
+        81,
+        82,
+        83,
+        84,
+        85,
+        86,
+        87,
+        88,
+        89
+      ],
+      "text": " 46  # copy_words(a0=source, a1=destination, a2=count), clobbers a0/a1/a2/t0\n 47  copy_words:\n 48      beq    $a2, $zero, copy_return         # 0088: 10c00006\n 49  copy_loop:\n 50      lw     $t0, 0($a0)                     # 008c: 8c880000\n 51      sw     $t0, 0($a1)                     # 0090: aca80000\n 52      addiu  $a0, $a0, 4                     # 0094: 24840004\n 53      addiu  $a1, $a1, 4                     # 0098: 24a50004\n 54      addiu  $a2, $a2, -1                    # 009c: 24c6ffff\n 55      bne    $a2, $zero, copy_loop           # 00a0: 14c0fffa\n 56  copy_return:\n 57      jr     $ra                             # 00a4: 03e00008\n 58  # bubble_sort(a0=base, a1=count): unsigned ascending, clobbers t0..t7\n 59  # Fixed shrinking passes, no early-exit optimization; shared by all modes.\n 60  bubble_sort:\n 61      addiu  $t7, $zero, 2                   # 00a8: 240f0002\n 62      slt    $t6, $a1, $t7                   # 00ac: 00af702a\n 63      bne    $t6, $zero, bubble_return       # 00b0: 15c0000e\n 64      addiu  $t0, $a1, -1                    # 00b4: 24a8ffff\n 65      sll    $t0, $t0, 2                     # 00b8: 00084080\n 66      addu   $t0, $a0, $t0                   # 00bc: 00884021\n 67  bubble_outer:\n 68      addu   $t1, $a0, $zero                 # 00c0: 00804821\n 69  bubble_inner:\n 70      lw     $t2, 0($t1)                     # 00c4: 8d2a0000\n 71      lw     $t3, 4($t1)                     # 00c8: 8d2b0004\n 72      slt    $t4, $t3, $t2                   # 00cc: 016a602a\n 73      beq    $t4, $zero, bubble_no_swap      # 00d0: 11800002\n 74      sw     $t3, 0($t1)                     # 00d4: ad2b0000\n 75      sw     $t2, 4($t1)                     # 00d8: ad2a0004\n 76  bubble_no_swap:\n 77      addiu  $t1, $t1, 4                     # 00dc: 25290004\n 78      bne    $t1, $t0, bubble_inner          # 00e0: 1528fff8\n 79      addiu  $t0, $t0, -4                    # 00e4: 2508fffc\n 80      bne    $t0, $a0, bubble_outer          # 00e8: 1504fff5\n 81  bubble_return:\n 82      jr     $ra                             # 00ec: 03e00008\n 83  # Merge sorted halves into scratch, then copy back. Equality chooses left.\n 84  merge_halves:\n 85      addiu  $t0, $zero, 4352                # 00f0: 24081100\n 86      addiu  $t1, $zero, 4372                # 00f4: 24091114\n 87      addiu  $t2, $zero, 4372                # 00f8: 240a1114\n 88      addiu  $t3, $zero, 4392                # 00fc: 240b1128\n 89      addiu  $t4, $zero, 4864                # 0100: 240c1300",
+      "retain_comments": true,
+      "font_size": 8.8
+    },
+    {
+      "type": "paragraph",
+      "text": "70〜75行の比較交換は両コアで共通である。走査範囲を1要素ずつ縮める固定パスを使い、交換がなかったことによる早期終了は行わない。"
+    },
+    {
+      "type": "pagebreak"
+    },
+    {
+      "type": "heading",
+      "text": "付録A　マージと入力データを読む"
+    },
+    {
+      "type": "code",
+      "caption": "コードA3　マージ、書き戻し、入力ROM（90行〜末尾）",
+      "source": "research/cases/original_ten/dual/listing.s",
+      "source_lines": [
+        90,
+        91,
+        92,
+        93,
+        94,
+        95,
+        96,
+        97,
+        98,
+        99,
+        100,
+        101,
+        102,
+        103,
+        104,
+        105,
+        106,
+        107,
+        108,
+        109,
+        110,
+        111,
+        112,
+        113,
+        114,
+        115,
+        116,
+        117,
+        118,
+        119,
+        120,
+        121,
+        122,
+        123,
+        124,
+        125,
+        126,
+        127,
+        128,
+        129,
+        130,
+        131,
+        132,
+        133,
+        134,
+        135,
+        136,
+        137,
+        138
+      ],
+      "text": " 90  merge_loop:\n 91      beq    $t0, $t1, merge_drain_right     # 0104: 11090013\n 92      beq    $t2, $t3, merge_drain_left      # 0108: 114b000c\n 93      lw     $t5, 0($t0)                     # 010c: 8d0d0000\n 94      lw     $t6, 0($t2)                     # 0110: 8d4e0000\n 95      slt    $t7, $t6, $t5                   # 0114: 01cd782a\n 96      bne    $t7, $zero, merge_take_right    # 0118: 15e00004\n 97      sw     $t5, 0($t4)                     # 011c: ad8d0000\n 98      addiu  $t0, $t0, 4                     # 0120: 25080004\n 99      addiu  $t4, $t4, 4                     # 0124: 258c0004\n100      j      merge_loop                      # 0128: 08000041\n101  merge_take_right:\n102      sw     $t6, 0($t4)                     # 012c: ad8e0000\n103      addiu  $t2, $t2, 4                     # 0130: 254a0004\n104      addiu  $t4, $t4, 4                     # 0134: 258c0004\n105      j      merge_loop                      # 0138: 08000041\n106  merge_drain_left:\n107      beq    $t0, $t1, merge_copy_back       # 013c: 1109000b\n108      lw     $t5, 0($t0)                     # 0140: 8d0d0000\n109      sw     $t5, 0($t4)                     # 0144: ad8d0000\n110      addiu  $t0, $t0, 4                     # 0148: 25080004\n111      addiu  $t4, $t4, 4                     # 014c: 258c0004\n112      j      merge_drain_left                # 0150: 0800004f\n113  merge_drain_right:\n114      beq    $t2, $t3, merge_copy_back       # 0154: 114b0005\n115      lw     $t6, 0($t2)                     # 0158: 8d4e0000\n116      sw     $t6, 0($t4)                     # 015c: ad8e0000\n117      addiu  $t2, $t2, 4                     # 0160: 254a0004\n118      addiu  $t4, $t4, 4                     # 0164: 258c0004\n119      j      merge_drain_right               # 0168: 08000055\n120  merge_copy_back:\n121      addiu  $a0, $zero, 4864                # 016c: 24041300\n122      addiu  $a1, $zero, 4352                # 0170: 24051100\n123      addiu  $a2, $zero, 10                  # 0174: 2406000a\n124      j      copy_words                      # 0178: 08000022\n125  \n126  # Fixed read-only input data in the same ROM image.\n127  .org 0x0800\n128  input_values:\n129      .word 0x00000007                       # 0800\n130      .word 0x00000001                       # 0804\n131      .word 0x00000004                       # 0808\n132      .word 0x00000009                       # 080c\n133      .word 0x00000003                       # 0810\n134      .word 0x00000008                       # 0814\n135      .word 0x00000002                       # 0818\n136      .word 0x00000006                       # 081c\n137      .word 0x00000005                       # 0820\n138      .word 0x00000000                       # 0824",
+      "retain_comments": true,
+      "font_size": 8.8
+    },
+    {
+      "type": "pagebreak"
+    },
+    {
+      "type": "heading",
+      "text": "付録B　全54条件の結果を確認する"
+    },
+    {
+      "type": "paragraph",
+      "text": "1行が一つの入力群で、3方式の各欄は総サイクル数である。18行×3方式の54条件について、既存simulate.logのPASS行と終了コード0を確認した。入力の名前は保存済みケース名と一致させた。"
+    },
+    {
+      "type": "table",
+      "caption": "表B1　18入力群、3方式の全結果",
+      "headers": [
+        "ケース名",
+        "N",
+        "serial_split",
+        "dual",
+        "serial_full",
+        "判定"
+      ],
+      "widths": [
+        170,
+        28,
+        78,
+        62,
+        77,
+        84.2756
+      ],
+      "rows": [
+        [
+          "empty",
+          "0",
+          "49",
+          "46",
+          "27",
+          "全3方式PASS"
+        ],
+        [
+          "singleton_zero",
+          "1",
+          "67",
+          "64",
+          "33",
+          "全3方式PASS"
+        ],
+        [
+          "singleton_max",
+          "1",
+          "67",
+          "64",
+          "33",
+          "全3方式PASS"
+        ],
+        [
+          "sorted_two",
+          "2",
+          "89",
+          "86",
+          "51",
+          "全3方式PASS"
+        ],
+        [
+          "reverse_two",
+          "2",
+          "90",
+          "87",
+          "53",
+          "全3方式PASS"
+        ],
+        [
+          "duplicate_three",
+          "3",
+          "123",
+          "122",
+          "74",
+          "全3方式PASS"
+        ],
+        [
+          "original_ten",
+          "10",
+          "442",
+          "366",
+          "441",
+          "全3方式PASS"
+        ],
+        [
+          "sorted_ten",
+          "10",
+          "399",
+          "321",
+          "387",
+          "全3方式PASS"
+        ],
+        [
+          "reverse_ten",
+          "10",
+          "440",
+          "342",
+          "477",
+          "全3方式PASS"
+        ],
+        [
+          "duplicate_ten",
+          "10",
+          "443",
+          "367",
+          "437",
+          "全3方式PASS"
+        ],
+        [
+          "equal_sixteen",
+          "16",
+          "753",
+          "558",
+          "891",
+          "全3方式PASS"
+        ],
+        [
+          "uint32_nine",
+          "9",
+          "388",
+          "344",
+          "364",
+          "全3方式PASS"
+        ],
+        [
+          "random_seven",
+          "7",
+          "281",
+          "260",
+          "230",
+          "全3方式PASS"
+        ],
+        [
+          "random_seventeen",
+          "17",
+          "923",
+          "733",
+          "1,164",
+          "全3方式PASS"
+        ],
+        [
+          "random_thirtytwo",
+          "32",
+          "2,513",
+          "1,772",
+          "3,763",
+          "全3方式PASS"
+        ],
+        [
+          "sorted_sixtyfour",
+          "64",
+          "7,473",
+          "4,398",
+          "12,699",
+          "全3方式PASS"
+        ],
+        [
+          "reverse_sixtyfour",
+          "64",
+          "9,458",
+          "5,391",
+          "16,731",
+          "全3方式PASS"
+        ],
+        [
+          "random_sixtyfour",
+          "64",
+          "8,614",
+          "5,527",
+          "14,803",
+          "全3方式PASS"
+        ]
+      ],
+      "font_size": 8.8,
+      "padding": 8
+    },
+    {
+      "type": "paragraph",
+      "text": "出典はreport/xsim-results.csvと各実行ログである。CSVにはサイクル数などの観測値が入り、PASS判定は実行ログと終了記録で確認する。波形デモ6件と追加検証4件、期待値不一致の負例は、この54条件には加算していない。"
+    },
+    {
+      "type": "pagebreak"
+    },
+    {
+      "type": "heading",
+      "text": "付録C　途中状態と終了時の検査コード"
+    },
+    {
+      "type": "subheading",
+      "text": "C1　受理されたstoreの領域と通知を調べる"
+    },
+    {
+      "type": "paragraph",
+      "text": "以下はtests/sort/tb_sort.vの抜粋である。check_writeは受理されるstoreについて呼ぶ。Core1の配列書込み回数と、自分の完了通知回数も数える。担当外書込みと早すぎるマージの検出は最終配列の比較とは別に行う。"
+    },
+    {
+      "type": "code",
+      "caption": "コードC1　書込み領域の検査とCore1の受理書込み（tb_sort.v）",
+      "source": "tests/sort/tb_sort.v",
+      "source_lines": [
+        96,
+        97,
+        98,
+        99,
+        100,
+        101,
+        102,
+        103,
+        104,
+        105,
+        106,
+        107,
+        108,
+        109,
+        110,
+        111,
+        112,
+        113,
+        114,
+        115,
+        116,
+        117,
+        118,
+        119,
+        150,
+        151,
+        152,
+        153,
+        154,
+        155
+      ],
+      "text": " 96      task check_write;\n 97          input integer core;\n 98          input [31:0] address;\n 99          begin\n100              if ((^address) === 1'bx || address[1:0] != 0)\n101                  $fatal(1, \"FAIL: core%0d invalid write address %h\", core, address);\n102              if (!((address >= 32'h1000 && address <= 32'h100c) ||\n103                    (address >= 32'h1100 && address < 32'h1100 + count*4) ||\n104                    (address >= 32'h1300 && address < 32'h1300 + count*4)))\n105                  $fatal(1, \"FAIL: core%0d out-of-bounds write %h\", core, address);\n106              if (DUAL && core == 1) begin\n107                  if (ready !== 32'd1)\n108                      $fatal(1, \"FAIL: core1 wrote before input initialization\");\n109                  if (!(address == 32'h1008 ||\n110                        (address >= 32'h1100+(count/2)*4 && address < 32'h1100+count*4)))\n111                      $fatal(1, \"FAIL: core1 wrote outside its half/done flag %h\", address);\n112              end\n113              if (DUAL && core == 0 && ready == 1 && left_done == 0 &&\n114                  address >= 32'h1100 && address >= 32'h1100+(count/2)*4)\n115                  $fatal(1, \"FAIL: core0 crossed its half before publishing done\");\n116              if (DUAL && core == 0 && address >= 32'h1300 &&\n117                  (left_done !== 1 || right_done !== 1))\n118                  $fatal(1, \"FAIL: merge started before both halves completed\");\n119          end\n     ...\n150              if (req1 && write1 && !stall1) begin\n151                  check_write(1, addr1);\n152                  if (addr1 >= 32'h1100 && addr1 < 32'h1100 + count*4)\n153                      core1_array_stores = core1_array_stores + 1;\n154                  if (addr1 == 32'h1008 && value1 == 1)\n155                      core1_done_publications = core1_done_publications + 1;",
+      "retain_comments": true,
+      "font_size": 8.8
+    },
+    {
+      "type": "pagebreak"
+    },
+    {
+      "type": "subheading",
+      "text": "C2　ストール前後のPCとレジスタを比較する"
+    },
+    {
+      "type": "code",
+      "caption": "コードC2　状態保持の検査（tb_sort.v）",
+      "source": "tests/sort/tb_sort.v",
+      "source_lines": [
+        157,
+        158,
+        159,
+        160,
+        161,
+        162,
+        163,
+        164,
+        165,
+        166,
+        167,
+        168,
+        169
+      ],
+      "text": "157              previous_pc0 = pc0; previous_pc1 = pc1;\n158              previous_regs0 = all_regs0;\n159              previous_regs1 = all_regs1;\n160              previous_stall0 = stall0; previous_stall1 = stall1;\n161              if (stall1) stalls1 = stalls1 + 1;\n162              @(posedge clk); #1;\n163              cycles = cycles + 1;\n164              if (previous_stall0 && (pc0 !== previous_pc0 ||\n165                  all_regs0 !== previous_regs0))\n166                  $fatal(1, \"FAIL: core0 changed state at stalled edge\");\n167              if (previous_stall1 && (pc1 !== previous_pc1 ||\n168                  all_regs1 !== previous_regs1))\n169                  $fatal(1, \"FAIL: core1 changed state at stalled edge\");",
+      "retain_comments": true,
+      "font_size": 8.8
+    },
+    {
+      "type": "paragraph",
+      "text": "全32レジスタを連結したall_regsとPCをクロック端の前後で比較する。ストール前後の一致を検査するため、図4で見えているPC以外の状態更新も検出対象になる。"
+    },
+    {
+      "type": "subheading",
+      "text": "C3　完了通知と最終配列を照合する"
+    },
+    {
+      "type": "code",
+      "caption": "コードC3　終了条件と64ワードの照合（tb_sort.v）",
+      "source": "tests/sort/tb_sort.v",
+      "source_lines": [
+        177,
+        178,
+        179,
+        180,
+        181,
+        182,
+        183,
+        184,
+        185,
+        186,
+        187
+      ],
+      "text": "177          if (complete !== 1 || (DUAL && (ready !== 1 || left_done !== 1 || right_done !== 1)))\n178              $fatal(1, \"FAIL: termination without completed protocol\");\n179          if (DUAL && (core0_done_publications != 1 || core1_done_publications != 1))\n180              $fatal(1, \"FAIL: each core must publish its own completion exactly once\");\n181          if (DUAL && right_unsorted && core1_array_stores == 0)\n182              $fatal(1, \"FAIL: unsorted right half had no accepted core1 swap stores\");\n183          for (i = 0; i < 64; i = i + 1) begin\n184              index = 32'h1100/4+i; #1;\n185              if (memory_word !== expected[i])\n186                  $fatal(1, \"FAIL: array[%0d] expected=%h got=%h\", i, expected[i], memory_word);\n187          end",
+      "retain_comments": true,
+      "font_size": 8.8
+    },
+    {
+      "type": "paragraph",
+      "text": "188〜196行では配列下端0x10FC、上端0x1200、作業領域下端0x12FC、使用した作業領域直後のガードが0のままであることも確認する。初期入力のスナップショットと図5の表示用フラグは、波形用のtb_vivado_sort.vが追加している。"
+    }
+  ]
+}

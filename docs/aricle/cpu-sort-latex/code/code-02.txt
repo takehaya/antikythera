@@ -1,0 +1,11 @@
+150      wire core_id_access = (ALUResult == 32'h00003000) ||
+151                            (ALUResult == 32'h00001ffc);
+152      wire is_core_id_read = MemRead && core_id_access;
+     ...
+156          if ((MemRead || MemWrite) && !core_id_access) begin
+157              dmem_req = 1'b1;
+158              dmem_write = MemWrite;
+159              dmem_addr = ALUResult;
+160              dmem_write_data = regData2;
+     ...
+170      wire [31:0] unifiedMemReadData = is_core_id_read ? CORE_ID : dmem_read_data;

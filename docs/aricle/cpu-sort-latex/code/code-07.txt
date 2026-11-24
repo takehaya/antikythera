@@ -1,0 +1,6 @@
+ 70      lw     $t2, 0($t1)
+ 71      lw     $t3, 4($t1)
+ 72      slt    $t4, $t3, $t2
+ 73      beq    $t4, $zero, bubble_no_swap
+ 74      sw     $t3, 0($t1)
+ 75      sw     $t2, 4($t1)

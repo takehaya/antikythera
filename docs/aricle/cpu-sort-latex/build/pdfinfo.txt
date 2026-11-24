@@ -1,0 +1,21 @@
+Title:           2コアCPUにおける分割ソートの設計と検証
+Subject:         
+Keywords:        
+Author:          早坂（正式氏名未確定）
+Creator:         LaTeX with hyperref
+Producer:        dvipdfmx (20211117)
+CreationDate:    Tue Nov 24 02:05:42 2026 UTC
+Custom Metadata: no
+Metadata Stream: no
+Tagged:          no
+UserProperties:  no
+Suspects:        no
+Form:            none
+JavaScript:      no
+Pages:           30
+Encrypted:       no
+Page size:       595.28 x 841.89 pts (A4)
+Page rot:        0
+File size:       1138631 bytes
+Optimized:       no
+PDF version:     1.5

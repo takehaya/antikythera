@@ -1,0 +1,9 @@
+ 12      addiu  $a0, $zero, 2048
+ 13      addiu  $a1, $zero, 4352
+ 14      addiu  $a2, $zero, 10
+ 15      jal    copy_words
+ 16      addiu  $t0, $zero, 1
+ 17      sw     $t0, 4096($zero)
+ 18      addiu  $a0, $zero, 4352
+ 19      addiu  $a1, $zero, 5
+ 20      jal    bubble_sort
