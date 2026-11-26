@@ -1,10 +1,12 @@
 # Mode: dual; count=10; split=5/5; UNSIGNED32
-# Target-specific SLT is unsigned; NO branch/jump delay slots; JAL saves PC+4.
-# All addresses are bytes. READY must initially be zero before releasing cores.
+# このCPUが実装する32ビットMIPS風の命令セットを使う。右の注記はバイトアドレスと機械語。
+# この実装の slt は符号なし比較。分岐・ジャンプに遅延スロットはなく、jal は $ra に PC+4 を保存する。
+# 共有RAMのREADYは、両コアが動き始める前に0であることが前提。
 _start:
+# lwで自分のコアIDを読み、bneでCore 1だけ後半担当へ分岐する。
     lw     $s0, 8188($zero)                # 0000: 8c101ffc
     bne    $s0, $zero, secondary           # 0004: 16000015
-# Core 0 owns initialization, input copy, merge, and COMPLETE publication.
+# Core 0は同期フラグを初期化し、ROMの入力をRAMへコピーしてからREADYを通知する。
     sw     $zero, 4096($zero)              # 0008: ac001000
     sw     $zero, 4100($zero)              # 000c: ac001004
     sw     $zero, 4104($zero)              # 0010: ac001008
@@ -21,6 +23,7 @@ _start:
     addiu  $t0, $zero, 1                   # 003c: 24080001
     sw     $t0, 4100($zero)                # 0040: ac081004
 wait_right:
+# Core 0は前半の整列後、Core 1の完了フラグを読み続ける。そろったらマージする。
     lw     $t0, 4104($zero)                # 0044: 8c081008
     beq    $t0, $zero, wait_right          # 0048: 1100fffe
     jal    merge_halves                    # 004c: 0c00003c
@@ -30,6 +33,7 @@ publish_complete:
     j      halt                            # 0058: 08000021
 secondary:
 wait_ready:
+# Core 1はREADYを待って、配列の後半だけを整列する。
     lw     $t0, 4096($zero)                # 005c: 8c081000
     beq    $t0, $zero, wait_ready          # 0060: 1100fffe
     addiu  $a0, $zero, 4372                # 0064: 24041114
@@ -71,6 +75,7 @@ bubble_inner:
     lw     $t3, 4($t1)                     # 00c8: 8d2b0004
     slt    $t4, $t3, $t2                   # 00cc: 016a602a
     beq    $t4, $zero, bubble_no_swap      # 00d0: 11800002
+# 隣接2要素を交換する2本のストア。元のデモではCore 1が0x00d4で待機する。
     sw     $t3, 0($t1)                     # 00d4: ad2b0000
     sw     $t2, 4($t1)                     # 00d8: ad2a0004
 bubble_no_swap:
@@ -80,7 +85,7 @@ bubble_no_swap:
     bne    $t0, $a0, bubble_outer          # 00e8: 1504fff5
 bubble_return:
     jr     $ra                             # 00ec: 03e00008
-# Merge sorted halves into scratch, then copy back. Equality chooses left.
+# 整列済みの両半分を一時領域にマージし、元の配列へ書き戻す。同値なら左側を先に取る。
 merge_halves:
     addiu  $t0, $zero, 4352                # 00f0: 24081100
     addiu  $t1, $zero, 4372                # 00f4: 24091114

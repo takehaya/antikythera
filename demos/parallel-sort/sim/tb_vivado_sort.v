@@ -1,18 +1,18 @@
 `timescale 1ns/1ps
 
 // リセット後、CPU自身がROMから入力をコピーし、整列を完了するまでを検証する。
-`include "case_config.vh"
 `include "run_paths.vh"
 // テストベンチは内部信号を観測するだけで、RAM・PC・レジスタを直接書き換えない。
 module tb_vivado_sort;
-    parameter DUAL = `DEMO_DUAL;
+    parameter DUAL = 1;
     reg clk = 0;
     always #5 clk = ~clk;
     reg reset = 1;
-    integer count = `DEMO_COUNT;
-    integer halt_pc = `DEMO_HALT_PC;
+    integer count, metadata_handle, metadata_fields;
+    string case_name, mode_name;
+    integer halt_pc;
     integer limit_cycles = 200000;
-    integer right_unsorted = `DEMO_RIGHT_UNSORTED;
+    integer right_unsorted;
     // 入力・実行中のRAM・整列後の値を波形で見比べるための信号。
     reg passed = 0, initial_valid = 0, final_valid = 0;
     reg [31:0] source_values [0:63];
@@ -28,11 +28,14 @@ module tb_vivado_sort;
     integer core0_done_publications = 0;
     integer index, i;
     reg [31:0] expected [0:63];
-    wire [31:0] pc0, pc1, memory_word;
-    wire [31:0] ready, left_done, right_done, complete;
-    wire stall0, stall1;
-    wire req0, req1, write0, write1;
-    wire [31:0] addr0, addr1, value0, value1;
+    wire [31:0] pc0, pc1, memory_word;   // pc0/pc1: 各コアが実行中の命令アドレス
+    wire [31:0] ready, left_done, right_done, complete; // 入力準備・左右の整列・マージ結果の書き戻し完了
+
+    // 末尾の0/1はコア番号。この信号群は波形で競合の前後を追うために使う。
+    wire req0, req1;         // 1: 共有データポートへのアクセス要求（ロードまたはストア）
+    wire write0, write1;     // req=1のとき、1はストア、0はロード。書き込み許可とは別
+    wire stall0, stall1;     // 1: 調停器からの待機指示。PC・レジスタを保持し、ストアも通らない
+    wire [31:0] addr0, addr1, value0, value1; // addr: 要求先のバイトアドレス、value: ストアする値
     wire [31:0] debug00, debug01, debug02, debug03;
     wire [31:0] debug10, debug11, debug12, debug13;
     reg [31:0] previous_pc0, previous_pc1;
@@ -142,7 +145,16 @@ module tb_vivado_sort;
     endtask
 
     initial begin
-        $display("DEMO: case=%s mode=%s simulator runtime output follows", `DEMO_CASE, `DEMO_MODE);
+        // XSimのrestartで再実行されるため、件数と期待値を再コンパイルなしで切り替えられる。
+        metadata_handle = $fopen(`DEMO_METADATA_FILE, "r");
+        if (!metadata_handle) $fatal(1, "FAIL: case metadata cannot be opened");
+        metadata_fields = $fscanf(metadata_handle, "%d %d %d %s", count, halt_pc, right_unsorted, case_name);
+        $fclose(metadata_handle);
+        if (metadata_fields != 4 || (right_unsorted != 0 && right_unsorted != 1))
+            $fatal(1, "FAIL: invalid case metadata");
+        if (DUAL) mode_name = "dual";
+        else mode_name = "single";
+        $display("DEMO: case=%s mode=%s simulator runtime output follows", case_name, mode_name);
         // 入力と期待値は照合用。DUTのRAMには書き込まない。
         $readmemh(`DEMO_INPUT_FILE, source_values);
         if (count < 0 || count > 64 || halt_pc < 0 || halt_pc >= 2048)
@@ -246,7 +258,7 @@ module tb_vivado_sort;
             core1_array_stores, core1_done_publications);
         result_handle = $fopen(`DEMO_RESULT_FILE, "w");
         if (!result_handle) $fatal(1, "FAIL: result file cannot be written");
-        $fdisplay(result_handle, "PASS: case=%s mode=%s n=%0d cycles=%0d stalls1=%0d core1_array_stores=%0d", `DEMO_CASE, `DEMO_MODE, count, cycles, stalls1, core1_array_stores);
+        $fdisplay(result_handle, "PASS: case=%s mode=%s n=%0d cycles=%0d stalls1=%0d core1_array_stores=%0d", case_name, mode_name, count, cycles, stalls1, core1_array_stores);
         $fclose(result_handle);
         #20; // Keep PASS visible in the captured waveform.
         $finish;

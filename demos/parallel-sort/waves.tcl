@@ -37,4 +37,4 @@ proc demo_view_result {} {
 
 log_wave -r /
 demo_view_pc
-puts {READY: original_ten / dual; simulator has not been advanced by this script.}
+puts {READY: simulator has not been advanced by this script.}
