@@ -63,7 +63,7 @@ module MultiCoreCPU #(
     );
 
     // CPUコア0
-    SimpleCPUWithMemInterface cpu_core0 (
+    SimpleCPUWithMemInterface #(.CORE_ID(0)) cpu_core0 (
         .clk(clk),
         .reset(reset),
         .stall(core0_stall),
@@ -85,7 +85,7 @@ module MultiCoreCPU #(
     );
 
     // CPUコア1
-    SimpleCPUWithMemInterface cpu_core1 (
+    SimpleCPUWithMemInterface #(.CORE_ID(1)) cpu_core1 (
         .clk(clk),
         .reset(reset),
         .stall(core1_stall),

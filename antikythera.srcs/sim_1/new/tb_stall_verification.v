@@ -26,7 +26,7 @@ module tb_StallVerification;
     reg pc_advance_test_passed;
 
     // テスト設定（使用するメモリファイルを指定）
-    parameter TEST_PROGRAM = "simple_stall_test.dat";  // ストール検証用テストプログラム
+    parameter TEST_PROGRAM = "scripts/testcase/simple_stall_test.dat";  // ストール検証用テストプログラム
     
     // テスト対象
     MultiCoreCPU #(
@@ -135,9 +135,12 @@ module tb_StallVerification;
                     pc_advance_test_passed = 1'b0;
                 end
                 
-                if (!uut.core1_stall && (uut.cpu_core1.PC == core1_pc_prev) && 
+                if (!core1_stall_prev && (uut.cpu_core1.PC == core1_pc_prev) &&
                     core1_pc_prev != 32'h00000014 && core1_pc_prev != 32'h00000018) begin
                     // ストールしていないのにPCが進まない場合はエラー（ループ命令は除く）
+                    // 注: 現サイクルの core1_stall ではなく「前サイクルにストールしていたか」
+                    //     (core1_stall_prev) で判定する。ストール解除直後はPCがまだ前値
+                    //     のままで正常なため、これを誤検知しないようにする。
                     $display("!!! ERROR: Core1 PC not advancing when not stalled - stuck at %h !!!", 
                             core1_pc_prev);
                     pc_advance_test_passed = 1'b0;

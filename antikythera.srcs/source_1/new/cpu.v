@@ -3,7 +3,9 @@
 // Memory boundary definition
 `define INST_MEM_BOUNDARY 32'h1000  // Instruction memory: 0x0000-0x0FFF, Data memory: 0x1000+
 
-module SingleCycleCPU(
+module SingleCycleCPU #(
+    parameter MEM_FILE = "memfile_I.dat"  // 命令メモリファイル名（TBごとにプログラムを注入可能）
+)(
     input clk,
     input reset,
 
@@ -18,11 +20,15 @@ module SingleCycleCPU(
     // 次PC計算用
     wire [31:0] PCplus4  = PC + 4;
 
-    // 命令メモリ
+    // 命令メモリ（デュアルポートの片方だけ使用、もう片方は未使用）
     wire [31:0] Instruction;
-    InstructionMemory imem (
-        .PC         (PC),
-        .Instruction(Instruction)
+    InstructionMemory #(
+        .MEM_FILE(MEM_FILE)
+    ) imem (
+        .PC0         (PC),
+        .Instruction0(Instruction),
+        .PC1         (32'h0),
+        .Instruction1()       // 未接続
     );
     
     // 命令各フィールド

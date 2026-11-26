@@ -1,7 +1,7 @@
 `timescale 1ns/1ps
 
 // Memory configuration
-`define MEM_SIZE 2048  // Memory size in words (8KB)
+`define MEM_SIZE 4096  // Memory size in words (16KB) - 共有メモリ領域(0x2000+)をカバー
 
 module DataMemory(
     input         clk,
@@ -14,7 +14,7 @@ module DataMemory(
     // メモリ配列（0x1100番地までアクセス可能にするため）
     reg [31:0] mem [0:`MEM_SIZE-1];
     // ワードアドレス（32bit アドレスの 4 バイト境界アライン版）
-    wire [10:0] wordAddr = Address[12:2];
+    wire [11:0] wordAddr = Address[13:2];
 
     // 書き込み処理処理
     always @(posedge clk) begin
