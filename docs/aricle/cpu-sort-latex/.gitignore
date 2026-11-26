@@ -1,0 +1,7 @@
+# LaTeX intermediate files; keep the final report and its QA reports.
+/build/*
+!/build/main.pdf
+!/build/fonts.txt
+!/build/pdfinfo.txt
+/figures/*.xbb
+.DS_Store
