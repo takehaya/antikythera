@@ -1,10 +1,9 @@
 `timescale 1ns/1ps
 
-// End-to-end cold-boot test. Programs initialize their own arrays from ROM.
+// リセット後、CPU自身がROMから入力をコピーし、整列を完了するまでを検証する。
 `include "case_config.vh"
 `include "run_paths.vh"
-// Visualization-only adapter of the full end-to-end checker.
-// No writes/force into DUT data RAM, PCs, flags, or registers are added.
+// テストベンチは内部信号を観測するだけで、RAM・PC・レジスタを直接書き換えない。
 module tb_vivado_sort;
     parameter DUAL = `DEMO_DUAL;
     reg clk = 0;
@@ -14,6 +13,7 @@ module tb_vivado_sort;
     integer halt_pc = `DEMO_HALT_PC;
     integer limit_cycles = 200000;
     integer right_unsorted = `DEMO_RIGHT_UNSORTED;
+    // 入力・実行中のRAM・整列後の値を波形で見比べるための信号。
     reg passed = 0, initial_valid = 0, final_valid = 0;
     reg [31:0] source_values [0:63];
     reg [31:0] initial_values [0:63];
@@ -40,6 +40,7 @@ module tb_vivado_sort;
     reg [1023:0] previous_regs0, previous_regs1;
     reg previous_stall0, previous_stall1;
 
+    // デモは2コア構成。比較用の1コア構成も後段で同じ観測信号に接続する。
     generate if (DUAL) begin : two
         MultiCoreCPU #(.MEM_FILE(`DEMO_PROGRAM_FILE)) dut (
             .clk(clk), .reset(reset),
@@ -58,6 +59,7 @@ module tb_vivado_sort;
         for (genvar a = 0; a < 64; a = a + 1) begin : watch_array
             assign array_words[a] = dut.mem_arbiter.data_memory.mem[1088+a];
         end
+        // RAMはワード配列。フラグのバイトアドレス0x1000は添字1024に対応する。
         assign ready = dut.mem_arbiter.data_memory.mem[1024];
         assign left_done = dut.mem_arbiter.data_memory.mem[1025];
         assign right_done = dut.mem_arbiter.data_memory.mem[1026];
@@ -73,8 +75,7 @@ module tb_vivado_sort;
         assign value0 = dut.core0_dmem_write_data;
         assign value1 = dut.core1_dmem_write_data;
     end else begin : one
-        // One instance of the same core and arbiter, with the second requester
-        // absent, is the comparison machine. It is not a different CPU design.
+        // 比較条件では同じCPUと調停器を使い、Core 1側の要求を無効にする。
         wire ireq;
         wire [31:0] instruction, read_data;
         SimpleCPUWithMemInterface #(.CORE_ID(32'd0)) cpu (
@@ -113,6 +114,7 @@ module tb_vivado_sort;
         assign {debug10,debug11,debug12,debug13} = 128'b0;
     end endgenerate
 
+    // 調停で受理されたストアだけを検査し、担当範囲と同期順序の違反を検出する。
     task check_write;
         input integer core;
         input [31:0] address;
@@ -141,6 +143,7 @@ module tb_vivado_sort;
 
     initial begin
         $display("DEMO: case=%s mode=%s simulator runtime output follows", `DEMO_CASE, `DEMO_MODE);
+        // 入力と期待値は照合用。DUTのRAMには書き込まない。
         $readmemh(`DEMO_INPUT_FILE, source_values);
         if (count < 0 || count > 64 || halt_pc < 0 || halt_pc >= 2048)
             $fatal(1, "FAIL: invalid test metadata");
@@ -148,6 +151,7 @@ module tb_vivado_sort;
         $readmemh(`DEMO_EXPECTED_FILE, expected);
         repeat (2) @(posedge clk);
         @(negedge clk); reset = 0;
+        // 動作中の全コアが終了ループに入るまで、毎サイクル調停とストアを検査する。
         while (!(pc0 === halt_pc && (!DUAL || pc1 === halt_pc))) begin
             #1;
             if (cycles >= limit_cycles)
@@ -171,6 +175,7 @@ module tb_vivado_sort;
                 if (addr1 == 32'h1008 && value1 == 1)
                     core1_done_publications = core1_done_publications + 1;
             end
+            // 立ち上がり前の状態を控え、ストールしたコアのPCと全レジスタを更新後と比較する。
             previous_pc0 = pc0; previous_pc1 = pc1;
             previous_regs0 = all_regs0;
             previous_regs1 = all_regs1;
@@ -184,6 +189,7 @@ module tb_vivado_sort;
             if (previous_stall1 && (pc1 !== previous_pc1 ||
                 all_regs1 !== previous_regs1))
                 $fatal(1, "FAIL: core1 changed state at stalled edge");
+            // READYの初回観測で、CPUがRAMへコピーした値を入力と照合する。
             if (ready == 1 && ready_cycle < 0) begin
                 ready_cycle = cycles;
                 for (snapshot_index = 0; snapshot_index < 64; snapshot_index = snapshot_index + 1) begin
@@ -193,12 +199,15 @@ module tb_vivado_sort;
                 end
                 initial_valid = 1;
             end
+            // 各段階を初めて観測したサイクルを記録する。
             if (left_done == 1 && left_cycle < 0) left_cycle = cycles;
             if (right_done == 1 && right_cycle < 0) right_cycle = cycles;
+            // 各段階を初めて観測したサイクルを記録する。
             if (left_done == 1 && right_done == 1 && halves_cycle < 0) halves_cycle = cycles;
             if (complete == 1 && complete_cycle < 0) complete_cycle = cycles;
             @(negedge clk);
         end
+        // 終了PCに着くだけでは合格にせず、完了通知と配列の値も照合する。
         if (complete !== 1 || (DUAL && (ready !== 1 || left_done !== 1 || right_done !== 1)))
             $fatal(1, "FAIL: termination without completed protocol");
         if (DUAL && (core0_done_publications != 1 || core1_done_publications != 1))
@@ -210,7 +219,7 @@ module tb_vivado_sort;
             if (memory_word !== expected[i])
                 $fatal(1, "FAIL: array[%0d] expected=%h got=%h", i, expected[i], memory_word);
         end
-        // Guard words catch overruns; all data began at zero in DataMemory.
+        // 配列・マージ領域の前後に置いたガードワードが、初期値の0のままか検査する。
         index = 32'h10fc/4; #1;
         if (memory_word !== 0) $fatal(1, "FAIL: array lower guard");
         index = 32'h1200/4; #1;
@@ -242,7 +251,7 @@ module tb_vivado_sort;
         #20; // Keep PASS visible in the captured waveform.
         $finish;
     end
-    // Scalar aliases remain convenient even if array expansion varies by Vivado release.
+    // Vivadoの版にかかわらず波形へ追加しやすいよう、先頭10要素を個別の信号名でも公開する。
     wire [31:0] initial_00 = initial_values[0];
     wire [31:0] current_00 = array_words[0];
     wire [31:0] final_00 = final_values[0];
@@ -275,6 +284,7 @@ module tb_vivado_sort;
     wire [31:0] final_09 = final_values[9];
 
     initial begin
+        // 必要なときだけ、GUIなしで確認できるVCD波形を出力する。
         if ($test$plusargs("DUMP_VCD")) begin
             $dumpfile("demo.vcd");
             $dumpvars(0, tb_vivado_sort);

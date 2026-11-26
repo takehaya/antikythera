@@ -31,7 +31,7 @@ module MultiCoreCPU #(
     // 調停器から各コアへのストール信号
     wire core0_stall, core1_stall;
 
-    // シンプルメモリ調停器
+    // 両コアのデータ要求を調停器に集める。命令読み出し口はコアごとに独立。
     SimpleMemoryArbiter #(
         .MEM_FILE(MEM_FILE)
     ) mem_arbiter (
@@ -62,7 +62,7 @@ module MultiCoreCPU #(
         .core1_stall(core1_stall)
     );
 
-    // CPUコア0
+    // 同じ回路を2個配置し、コア番号だけ変える。PCとレジスタはそれぞれのコアにある。
     SimpleCPUWithMemInterface #(.CORE_ID(0)) cpu_core0 (
         .clk(clk),
         .reset(reset),

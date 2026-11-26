@@ -58,7 +58,7 @@ module SimpleCPUWithMemInterface #(
     wire RegDst, ALUSrc, MemtoReg, RegWrite;
     wire MemRead, MemWrite;
     
-    // ストール制御用の中間信号
+    // 待機中はPCだけでなく、レジスタへの書き戻しも止める。
     wire RegWriteGated = RegWrite && !stall;
     wire Branch, BranchNot;
     wire Jump, JumpReg, Link;
@@ -145,8 +145,8 @@ module SimpleCPUWithMemInterface #(
         .Zero(ZeroFlag)
     );
 
-    // Preserve current MMIO 0x3000; 0x1ffc is the imported sort workload alias.
-    // Both addresses are read-only identity registers; stores are ignored.
+    // 従来のコアIDアドレス0x3000と、ソートプログラムが使う0x1FFCを同じ読み出し先として扱う。
+    // どちらもコア内で応答し、書き込みは無視する。
     wire core_id_access = (ALUResult == 32'h00003000) ||
                           (ALUResult == 32'h00001ffc);
     wire is_core_id_read = MemRead && core_id_access;

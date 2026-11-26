@@ -42,7 +42,7 @@ module SimpleMemoryArbiter #(
     assign core0_stall = 1'b0;  // コア0は決してストールしない（優先権あり）
     assign core1_stall = (core1_dmem_req && !core1_dmem_grant);  // データメモリ競合時のみストール
 
-    // データメモリインタフェースの多重化
+    // 許可された側のアドレスと書き込みデータだけを共有ポートへ渡す。
     wire dmem_write_granted = (core0_dmem_grant && core0_dmem_write) ||
                              (core1_dmem_grant && core1_dmem_write);
     wire dmem_read_granted = (core0_dmem_grant && !core0_dmem_write) ||
@@ -76,8 +76,8 @@ module SimpleMemoryArbiter #(
         .Instruction1(core1_imem_read_data)
     );
 
-    // Read-only ROM data path for cold-boot input copy. Keep the existing
-    // independent instruction ports. Physical BRAM mapping is not asserted.
+    // 起動時の入力コピーに使うデータ読み出し用ROM。命令読み出し口とは別経路。
+    // ここで示すのはRTL上の接続で、実機でのBRAM配置は未検証。
     InstructionMemory #(.MEM_FILE(MEM_FILE)) data_image (
         .PC0(dmem_addr_mux), .Instruction0(rom_data_read),
         .PC1(32'd0), .Instruction1()
