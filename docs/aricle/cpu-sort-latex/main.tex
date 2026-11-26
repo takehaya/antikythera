@@ -20,7 +20,7 @@
   columns=fullflexible,keepspaces=true,showstringspaces=false,
   breaklines=true,breakatwhitespace=false,breakindent=4em,
   frame=tb,framerule=.3pt,upquote=true,aboveskip=.7em,belowskip=.7em}
-\hypersetup{pdftitle={2コアCPUにおける分割ソートの設計と検証},pdfauthor={早坂（正式氏名未確定）}}
+\hypersetup{pdftitle={2コアCPUにおける分割ソートの設計と検証},pdfauthor={早坂 彪流}}
 \hypersetup{pageanchor=false}
 \begin{document}
 \thispagestyle{empty}
@@ -29,45 +29,43 @@
 \vfill
 {\LARGE 2コアCPUにおける\\分割ソートの設計と検証}\\
 \bigskip
-共有メモリの調停と完了同期を実コードと波形で確認する\\
+共有メモリの調停と完了同期に関するRTL検証\\
 \vfill
-早坂（正式な氏名表記は未確定）\\
-学籍番号：未確定\\
+早坂 彪流\\
+学籍番号：s2430020\\
 \vfill
-主指導教員：未確定\\
+主指導教員：田中 清史\\
 \vfill
 北陸先端科学技術大学院大学\\
-所属の正式表記：未確定\\
 \vfill
 \number\year 年\number\month 月\\
-改訂日：2026年11月22日\\
 \vfill
 \end{center}
 \clearpage\pagestyle{empty}
 \centerline{Abstract}\bigskip
-This report integrates an existing two-core CPU, sorting programs, and test
-code, and verifies their behavior and cycle counts using XSim 2023.1.
-The cores sort separate halves of an array; Core0 merges the results after
-both cores publish completion. A ten-element execution is traced using
-source-code excerpts and recorded waveforms, connecting synchronization,
-shared-port contention, and the final array. All 54 conditions, comprising
-18 input groups and three execution modes, passed the output and intermediate
-state checks. Compared with executing the same split-and-merge work on one
-core, the cycle count decreased from 442 to 366 for the specified ten-element
-input, and from 8,614 to 5,527 for a fixed random 64-element input.
-Initial copying and merging remain on Core0, and shared-port stalls also
-remain, so the total cycle count was not halved. The results concern RTL
-simulation; synthesis and physical FPGA performance were not evaluated.
+This report presents the integration and RTL verification of a parallel split-sort algorithm on a shared-memory two-core CPU.
+In this design, the two cores independently bubble-sort the first and second halves of an array, and Core0 merges the sorted halves after both cores signal completion.
+To execute the existing sorting program generator and verification testbenches on the target CPU, an input-ROM data read path with write protection and a compatible core-ID address alias were integrated into the memory arbiter and CPU core.
+
+Functional behavior and execution cycle counts were evaluated using Vivado XSim 2023.1 across 54 conditions spanning 18 input cases and three execution modes.
+All 54 conditions passed both final output verification and intermediate state assertions, including write-region checks, synchronization ordering, and state preservation during stalls.
+Waveform analysis of a ten-element execution traced shared-port contention, Core1 stalling and resumption, completion synchronization, and final array output in correspondence with the source code.
+Compared with executing the same split-and-merge algorithm sequentially on one core, two-core execution reduced total cycles from 442 to 366 for the specified ten-element input and from 8,614 to 5,527 (a 35.8\% reduction) for a fixed 64-element random input.
+Because initial copying and final merging remain sequential on Core0 and shared-port contention introduces stalls during parallel sorting, the total cycle count is not halved.
+All evaluations are limited to RTL behavioral simulation; logic synthesis and physical FPGA performance remain outside the scope of this report.
 \clearpage
 \centerline{概要}\bigskip
-共有メモリを使う2コアCPUで分割ソートの動作を検証した。各コアが配列の半分をバブルソートし、両コアのソートが終わるとCore0が結果をマージする。
-既存のCPU、ソート生成器、テストベンチを組み合わせ、入力ROMの読出し経路とコアIDの互換アドレスを加えた。
-XSim 2023.1で18の入力群をそれぞれ3方式で実行した。全54条件で、出力と実行途中の状態が検査に合格した。
-10要素の波形では、共有ポートの競合でCore1が停止する区間と、両側のソート完了からマージを経て最終配列が得られるまでを追った。
+本報告では、共有メモリを備えた2コアCPU上における分割バブルソートの統合設計と、RTLシミュレーションによる動作検証について述べる。
+本手法では、Core0が配列の前半、Core1が後半を並行してバブルソートし、両コアの完了通知を確認した後にCore0が結果をマージする。
+既存の2コアCPUにソートプログラム生成器およびテストベンチを統合するにあたり、入力ROMのデータ読み出し経路と書き込み抑止機構を調停器へ追加するとともに、コアIDを参照するための互換アドレスをCPU内に設けた。
 
-同じ分割ソートとマージを1コアで順に行う場合に比べ、指定の10要素では442から366サイクル、固定乱数64要素では8,614から5,527サイクルに減った。
-初期コピーとマージはCore0が担当し、並行ソート中にも共有ポートの待ち時間がある。
-評価はRTLシミュレーションに限り、合成とFPGA実機での測定は行っていない。
+検証にはVivado XSim 2023.1を用い、18種類の入力ケースと3つの実行方式を組み合わせた計54条件について、最終出力と実行途中の状態を検査した。
+その結果、全54条件において最終配列が期待値と一致し、担当外領域への書き込み抑止、同期順序、およびストール時の状態保持に関する検査をすべて通過した。
+また、10要素の代表入力については実コードと波形を対応付け、共有ポートの競合によるCore1の停止と再開、完了フラグによる同期、マージ後の最終配列出力に至る一連の動作を確認した。
+
+サイクル数の比較では、同一の分割ソートとマージを1コアで逐次実行する場合と比べ、指定10要素では442サイクルから366サイクルへ、固定乱数64要素では8,614サイクルから5,527サイクル（35.8\%減）へと短縮された。
+一方で、初期コピーとマージ処理はCore0が単独で担い、並行ソート中にも共有ポートの競合による待ち時間が生じるため、総サイクル数は1コア実行の半分には達しない。
+なお、本報告の評価はRTLシミュレーションに基づくものであり、論理合成やFPGA実機での性能評価は今後の課題とする。
 
 
 \clearpage\setcounter{page}{0}\pagenumbering{roman}\pagestyle{plain}\hypersetup{pageanchor=true}

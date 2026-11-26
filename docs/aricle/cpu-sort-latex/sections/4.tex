@@ -1,197 +1,142 @@
 \chapter{10要素の動作検証}\label{chap:4}
 
+本章では、指定された10要素の代表入力を2コア並列方式（dual）で実行した際の動作を、実コードとシミュレーション波形の対応付けによって詳細に確認する。
+入力データのコピーから開始同期、各コアのソート完了待ち合わせ、共有ポート競合時の状態保持、およびマージによる最終配列の出力まで、一連の処理経過を時系列で追跡する。
+
 \section{入力コピーと開始同期}\label{sec:4-1}
 
-指定入力は7, 1, 4, 9, 3, 8, 2, 6, 5, 0である。
-Core0は前半5要素、Core1は後半5要素を担当する。
-図\ref{fig:2}に処理順を示す。
-READYが立つまでCore1を待たせ、入力コピーの途中でソートが始まらないようにする。
-
-
+代表入力には10要素の配列（7, 1, 4, 9, 3, 8, 2, 6, 5, 0）を用い、Core0が前半5要素、Core1が後半5要素を担当する。
+図\ref{fig:2}に両コア間の処理および同期の順序を示す。
+ソート開始前にCore0が入力ROMから共有RAMへデータをコピーするため、Core1はREADYフラグが1になるまで待機し、未初期化の配列に対する先行アクセスを防止している。
 
 \begin{figure}[H]
-
 \centering
-
 \input{figures/synchronization.tex}
-
-\caption{開始通知、担当区間のソート、完了通知、マージの順序。フラグの1への更新は処理の担当コアが行う。}\label{fig:2}
-
+\caption{開始通知、担当区間のソート、完了通知、およびマージの実行順序。各フラグの1への更新は対応する処理の担当コアが行う。}\label{fig:2}
 \end{figure}
 
-\par\medskip\noindent\begin{minipage}{\linewidth}
-\par\medskip\noindent{\small\bfseries コード3　ROMからのコピーと前半ソート　listing.s}\par\nopagebreak
+コード3に、Core0における入力コピーから前半ソート呼び出しまでのアセンブリ抜粋を示す。
+12行目の即値2048は入力ROM先頭（0x0800）、13行目の4352は配列先頭（0x1100）に対応する。
+Core0はcopy\_wordsサブルーチンで10要素を共有RAMへ転送した後、17行目でREADY（0x1000）へ1を書き込んでCore1の待機を解除し、続いてbubble\_sortを呼び出して前半5要素の整列を開始する。
+なお、起動直後のフラグ初期化およびCore1側の待機ループは付録\ref{chap:A}（8〜11行、31〜43行）に示す。
 
+\par\medskip\noindent\begin{minipage}{\linewidth}
+\par\medskip\noindent{\small\bfseries コード3　ROMからの初期コピーと前半ソート（listing.s）}\par\nopagebreak
 \lstinputlisting{code/code-03.txt}
 \end{minipage}\par\medskip
 
-コード3の2048は0x0800、4352は0x1100である。
-Core0はROMからRAMへ10要素をコピーしてから、17行目でREADYに1を書く。
-次にCore0はソート処理を呼び出し、前半5要素を整列させる。
-フラグの初期クリアとCore1側の入口は付録Aの8〜11行、31〜43行に示す。
-
-
-
 \section{ソート完了の同期}\label{sec:4-2}
 
-\par\medskip\noindent\begin{minipage}{\linewidth}
-\par\medskip\noindent{\small\bfseries コード4　左側完了の通知と右側完了の待機　listing.s}\par\nopagebreak
+前半および後半のソートがともに完了してからマージへ移行するため、両コアは共有RAM上の完了フラグを用いて待ち合わせを行う（コード4）。
+Core0は前半のソートを終えるとLEFT\_DONE（0x1004）へ1を書き込み、Core1がRIGHT\_DONE（0x1008）を立てるまでポーリング待機した上でmerge\_halvesを呼び出す。
+一方、Core1は後半のソート終了後にRIGHT\_DONEへ1を書き込み、以降はCore0がCOMPLETE（0x100C）を立てるまで待機する。
+このように固定時間の遅延ではなくフラグによる完了通知を用いることで、入力データに依存するソート時間の変動によらず安全な同期を実現している。
 
+\par\medskip\noindent\begin{minipage}{\linewidth}
+\par\medskip\noindent{\small\bfseries コード4　完了通知と待ち合わせ処理（listing.s）}\par\nopagebreak
 \lstinputlisting{code/code-04.txt}
 \end{minipage}\par\medskip
 
-Core0はLEFT\_DONEへ1を書いた後、RIGHT\_DONEを繰り返し読む。
-Core1は自分のソートが終わるとRIGHT\_DONEへ1を書き、その後はCOMPLETEを待つ。
-固定時間の遅延ではなく、各処理の完了を次の処理の開始条件にしている。
-
-
+図\ref{fig:3}に10要素dual実行における各フラグの波形を、表\ref{tab:4}に対応する初回観測サイクルを示す。
+入力コピーが完了して74サイクル目にREADYが成立した後、Core0は168サイクル目にLEFT\_DONEを、Core1は188サイクル目にRIGHT\_DONEをそれぞれ立てた。
+Core0はRIGHT\_DONEの成立を確認してからマージと結果の書き戻しを実行し、363サイクル目にCOMPLETEを1へ更新した。
+その後、Core1がCOMPLETEを確認して両コアが終端ループへ到達するまでの総サイクル数は366サイクルとなった。
 
 \begin{figure}[H]
-
 \centering
-
 \noindent\makebox[\linewidth][l]{\small (a) 開始〜約1,900 ns}\par\smallskip
-
 \includegraphics[bb=0 0 2758 785,viewport=0 403 410 785,clip,width=.261\linewidth]{figures/02-synchronization-wave.png}%
 \hspace{.005\linewidth}\includegraphics[bb=0 0 2758 785,viewport=555 403 675 785,clip,width=.076\linewidth]{figures/02-synchronization-wave.png}%
 \hspace{.005\linewidth}\includegraphics[bb=0 0 2758 785,viewport=742 403 1750 785,clip,width=.643\linewidth]{figures/02-synchronization-wave.png}\par\medskip
-
 \noindent\makebox[\linewidth][l]{\small (b) 約1,900 ns〜終了}\par\smallskip
-
 \includegraphics[bb=0 0 2758 785,viewport=0 403 410 785,clip,width=.261\linewidth]{figures/02-synchronization-wave.png}%
 \hspace{.005\linewidth}\includegraphics[bb=0 0 2758 785,viewport=555 403 675 785,clip,width=.076\linewidth]{figures/02-synchronization-wave.png}%
 \hspace{.005\linewidth}\includegraphics[bb=0 0 2758 785,viewport=1750 403 2758 785,clip,width=.643\linewidth]{figures/02-synchronization-wave.png}\par\medskip
-
-\caption{10要素dual実行の完了フラグ。上下は同じ実行の前半と後半で、信号名を繰り返した。Value列は最終カーソル時点の値。横軸nsとリセット解除基準のcyclesは原点が異なる。}\label{fig:3}
-
+\caption{10要素dual実行における同期フラグの推移。上下は同一実行の前半と後半であり、視認性のため信号名列を再掲している。Value列は最終カーソル時点の値を示し、横軸（ns）とリセット解除基準のcyclesは原点が異なる。}\label{fig:3}
 \end{figure}
 
 \begin{table}[H]
-
 \centering
-
-\caption{図3に対応する初回観測サイクル}
-
+\caption{図\ref{fig:3}に対応する各イベントの初回観測サイクル}
 \label{tab:4}
-
 \footnotesize
-
 \setlength{\tabcolsep}{3pt}
-
 \renewcommand{\arraystretch}{1.25}
-
 \begin{tabular}{>{\raggedright\arraybackslash}p{\dimexpr0.180261\linewidth-2\tabcolsep\relax}>{\raggedright\arraybackslash}p{\dimexpr0.208302\linewidth-2\tabcolsep\relax}>{\raggedright\arraybackslash}p{\dimexpr0.208302\linewidth-2\tabcolsep\relax}>{\raggedright\arraybackslash}p{\dimexpr0.202293\linewidth-2\tabcolsep\relax}>{\raggedright\arraybackslash}p{\dimexpr0.200842\linewidth-2\tabcolsep\relax}}\toprule
-
-\textbf{READY} & \textbf{LEFT\_DONE} & \textbf{RIGHT\_DONE} & \textbf{COMPLETE} & \textbf{参加コア終端}\\\midrule
-
+\textbf{READY} & \textbf{LEFT\_DONE} & \textbf{RIGHT\_DONE} & \textbf{COMPLETE} & \textbf{全コア終端}\\\midrule
 74 & 168 & 188 & 363 & 366\\
-
 \bottomrule\end{tabular}
-
 \end{table}
 
-波形では、左側の完了が168サイクル目、右側の完了が188サイクル目に観測された（図\ref{fig:3}、表\ref{tab:4}）。
-Core0は右側の完了を確認してからマージと書き戻しを行い、363サイクル目にCOMPLETEを立てた。Core1がこれを確認し、参加コアが終端に達するまでを数えると366サイクルだった。
-
-
-
-Core1による配列への書込みは16回受理され、右側の完了通知もCore1が1回書き込んだ。書込み先が担当区間内であることと、通知元がCore1であることはテストベンチで照合した（付録C）。
-
-
+また、この実行を通じてCore1による配列領域への書き込みは計16回受理され、完了フラグ（RIGHT\_DONE）の更新もCore1自身が1回のみ行った。
+すべての書き込み先が後半の担当区間内に収まっていること、および完了通知の主体が担当コアであることは、テストベンチの動的検査によって確認された（付録\ref{chap:C}）。
 
 \section{競合時の状態保持と実行再開}\label{sec:4-3}
 
-\par\medskip\noindent\begin{minipage}{\linewidth}
-\par\medskip\noindent{\small\bfseries コード5a　Core0優先の調停とストール　simple\_memory\_arbiter.v}\par\nopagebreak
+両コアが並行してソートを実行する区間では、共有データポートへのアクセス要求が同時に発生し得る。
+コード5aおよびコード5bに、既存CPUから引き継いだ調停とストール保持の機構を示す。
+req0とreq1が同時に1になると、調停器はCore0へアクセス権を許可し、Core1に対してstall1を出力する。
+CPU内部ではレジスタ書き込みイネーブル（RegWrite）を!stallでゲートするとともに、PCの更新も!stallが成立するクロックエッジのみに制限することで、ストール中の状態変化を抑止している。
 
+\par\medskip\noindent\begin{minipage}{\linewidth}
+\par\medskip\noindent{\small\bfseries コード5a　Core0優先の調停とストール生成（simple\_memory\_arbiter.v）}\par\nopagebreak
 \lstinputlisting{code/code-05.txt}
 \end{minipage}\par\medskip
 
-req0とreq1が同時に1になると、Core0が許可され、Core1のstall1が1になる。
-CPU側ではRegWriteを!stallで抑止し、PCも!stallのときだけ更新する。
-この機構は既存のCPUから引き継いだ。
-
-
-
 \par\medskip\noindent\begin{minipage}{\linewidth}
-\par\medskip\noindent{\small\bfseries コード5b　レジスタ書込みとPC更新の抑止　simple\_cpu\_with\_mem\_interface.v}\par\nopagebreak
-
+\par\medskip\noindent{\small\bfseries コード5b　レジスタ書き込みとPC更新の抑止（simple\_cpu\_with\_mem\_interface.v）}\par\nopagebreak
 \lstinputlisting{code/code-06.txt}
 \end{minipage}\par\medskip
 
-\par\medskip\noindent\begin{minipage}{\linewidth}
-\par\medskip\noindent{\small\bfseries コード6　隣接要素の比較と交換　listing.s}\par\nopagebreak
+並行ソートの内側ループでは、コード6のように隣接する2要素をロードして符号なし比較（slt）を行い、後方の要素が小さい場合に74〜75行のストア命令で値を交換する。
+図\ref{fig:4}に、1085.4 ns付近で両コアのデータアクセスが競合した瞬間の波形を示す。
 
+\par\medskip\noindent\begin{minipage}{\linewidth}
+\par\medskip\noindent{\small\bfseries コード6　バブルソートにおける隣接要素の比較と交換（listing.s）}\par\nopagebreak
 \lstinputlisting{code/code-07.txt}
 \end{minipage}\par\medskip
 
-このCPUのsltは符号なし比較である。
-後ろの要素の値が小さければ、74〜75行で二つの要素を交換する。
-
-
-
 \begin{figure}[H]
-
 \centering
-
 \includegraphics[bb=0 0 2758 382,viewport=0 0 1950 382,clip,width=\linewidth]{figures/03-contention-wave.png}
-
-\caption{1085.4 ns付近の同時要求。req0、req1、stall1が1で、PC0は0xC8、PC1は0xD4を示す。Core1のPCは競合区間をまたいで保持され、待機解除後に0xD8へ進む。}\label{fig:4}
-
+\caption{1085.4 ns付近における共有ポート競合時の波形。req0、req1、およびstall1が同時に1となり、PC0は0xC8、PC1は0xD4を示す。Core1のPCは競合区間をまたいで0xD4に保持され、ストール解除後に0xD8へ遷移する。}\label{fig:4}
 \end{figure}
 
-付録AのPC注記と照合すると、0xC8はコード6の71行目のload、0xD4は74行目の最初のstoreである。
-図\ref{fig:4}ではCore1のPCが1075〜1095 nsの競合区間をまたいで0xD4に留まる。
-再開後の0xD8は75行目の次のstoreに対応する。
+付録\ref{chap:A}のPC注記と照合すると、PC0の0xC8はコード6の71行目のロード命令、PC1の0xD4は74行目の最初のストア命令に対応する。
+図\ref{fig:4}では、1075〜1095 nsの競合区間においてCore0の要求が優先される一方、Core1はstall1の成立に伴いPCを0xD4のまま保持している。
+続くクロックで競合が解消されると、Core1は74行目のストアを完了して0xD8（75行目のストア命令）へ正常に実行を再開した。
 
-
-
-この実行でCore1がストールしたのは計77サイクルだった。図\ref{fig:4}ではその一例としてPCの保持と再開を示す。
-テストベンチでは、ストールしたクロック端の前後でPCと全32レジスタを照合した（付録C.2）。
-
-
+なお、この10要素実行全体を通じてCore1がストールした回数は計77サイクルであった。
+図\ref{fig:4}はその代表例としてPCの保持と再開を示したものであるが、テストベンチ側ではストールが発生したすべてのクロックエッジ前後でPCおよび全32レジスタの一致を網羅的に検証している（付録\ref{sec:C-2}）。
 
 \section{マージ処理と最終配列の確認}\label{sec:4-4}
 
-両側の完了後、Core0は整列済み区間の先頭を比較し、小さい値を0x1300からの作業領域へ書く。
-同値では左側を選ぶ。
-一方の区間を使い切ったら残りを転送し、作業領域の10要素を0x1100へ書き戻す。
-付録Aに分岐と残り要素の処理を含む一覧を示す。
-
-
+左右のソート完了後、Core0は両整列済み区間の先頭要素を順次比較し、小さい方の値を0x1300から始まる作業領域へ格納する（コード7）。
+比較値が等しい場合は左側を優先して選択し、一方の区間を読み終えた後は残りの要素をそのまま作業領域へ転送する。
+最後に、作業領域上の10要素を配列領域（0x1100）へ書き戻すことでソート処理全体が完了する。
+残り要素の転送ループを含むマージ処理の全体は付録\ref{chap:A}に示す。
 
 \par\medskip\noindent\begin{minipage}{\linewidth}
-\par\medskip\noindent{\small\bfseries コード7　マージの比較と最後の書き戻し　listing.s}\par\nopagebreak
-
+\par\medskip\noindent{\small\bfseries コード7　マージ比較と結果の書き戻し（listing.s）}\par\nopagebreak
 \lstinputlisting{code/code-08.txt}
 \end{minipage}\par\medskip
 
+図\ref{fig:5}は、図\ref{fig:3}および図\ref{fig:4}と同一の10要素dual実行における終了時の波形スナップショットであり、コード8にその観測信号の更新処理を示す。
+マージおよび書き戻し後の最終配列（final\_00〜final\_09）は0から9まで昇順に整列しており、総サイクル数（cycles）は366を示している。
+また、入力コピー照合の完了を示すinitial\_valid、最終配列の取り込みを示すfinal\_valid、および期待値照合を含む全検査の合格を示すpassedがいずれも1となっており、一連の処理が正しく完了したことを確認した。
+なお、図\ref{fig:5}に表示されている配列値はマージ完了後の最終結果であり、左右それぞれのソート直後の中間状態ではない。
+
 \begin{figure}[H]
-
 \centering
-
 \begin{minipage}{.43\linewidth}
-
 \includegraphics[width=\linewidth]{figures/01a-correctness-values.png}
-
 \end{minipage}\hfill\begin{minipage}{.51\linewidth}
-
-\small 入力\par 7,1,4,9,3,8,2,6,5,0\par \par 出力\par 0,1,2,3,4,5,6,7,8,9\par \par Core1の受理された配列storeは16回。自分の完了通知は1回だった。
-
+\small\raggedright \textbf{入力配列}\par 7, 1, 4, 9, 3, 8, 2, 6, 5, 0\par \medskip \textbf{出力配列}\par 0, 1, 2, 3, 4, 5, 6, 7, 8, 9\par \medskip Core1による配列への受理ストアは16回、RIGHT\_DONE通知は1回であった。
 \end{minipage}
-
-\caption{最終スナップショット。final\_00〜final\_09は0〜9、cyclesは366。initial\_validは入力コピーの照合、final\_validは最終値の取得、passedは検査通過を示す。}\label{fig:5}
-
+\caption{終了時の最終スナップショット。final\_00〜final\_09は0〜9、cyclesは366を示す。initial\_validは入力コピー照合完了、final\_validは最終値取得完了、passedは全検査通過を表す。}\label{fig:5}
 \end{figure}
 
 \par\medskip\noindent\begin{minipage}{\linewidth}
-\par\medskip\noindent{\small\bfseries コード8　保存した最終値と検査通過の公開　tb\_vivado\_sort.v}\par\nopagebreak
-
+\par\medskip\noindent{\small\bfseries コード8　最終配列スナップショットと検査通過フラグの更新（tb\_vivado\_sort.v）}\par\nopagebreak
 \lstinputlisting{code/code-09.txt}
 \end{minipage}\par\medskip
-
-図\ref{fig:5}は同じten-dual-v2実行の波形で、マージ後の配列が0から9まで昇順に並んでいる。
-final\_validは最終値を取り込んだこと、passedは期待値との照合を含む検査を通過したことを示す。
-この波形に表示したのはマージ後の配列で、左右それぞれのソート直後の配列ではない。
-
-

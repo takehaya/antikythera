@@ -1,102 +1,69 @@
 \chapter{CPU構成と検証用実装}\label{chap:2}
 
+本章では、検証対象とする2コアCPUのアーキテクチャおよび共有メモリの調停構成を説明する。
+続いて、ソートプログラムが使用するメモリ空間の配置と、統合にあたってCPUおよび調停器へ追加した実装内容を示す。
+
 \section{命令経路と共有データポートの調停}\label{sec:2-1}
 
-各コアはPCと32本の32ビットレジスタを持ち、同じプログラムを実行する。
-各コアは自身のPCが指す命令を独立に読み出す。
-調停器は両コアからデータアクセスの要求を受け、要求が重なるとCore0を優先する。
-Core1は競合中にPCとレジスタを保持する。
-
-
+本検証で用いるCPUは2つの同一構成コア（Core0、Core1）から成り、各コアは固有のPCと32本の32ビット汎用レジスタを備えて同一のプログラムを実行する。
+図\ref{fig:1}にCPUとメモリの接続構成を示す。
+命令フェッチ経路では、命令メモリ（inst\_memory）の単一配列を両コアのPCから独立して読み出すため、命令取得に伴うコア間の競合は発生しない。
+一方、データアクセス経路では両コアが単一の共有データポートを共用しており、調停器がアクセス要求を調停する。
+両コアから同時にデータアクセス要求が生じた場合はCore0を固定優先で許可し、Core1へストール信号を出力することで、待機中のCore1のPCとレジスタ状態を保持する。
 
 \begin{figure}[H]
-
 \centering
-
 \input{figures/architecture.tex}
-
-\caption{CPUとメモリの接続。双方向矢印は要求と応答の往復を表す。coreIDは各CPU内で返すため、共有データポートを使わない。}\label{fig:1}
-
+\caption{CPUとメモリの接続構成。双方向矢印は要求と応答の往復を表す。coreIDは各CPU内部で応答するため、共有データポートを経由しない。}\label{fig:1}
 \end{figure}
 
-命令用のinst\_memoryは一つの配列を二つのPCで読み出す。
-追加したデータ読出し用のdata\_imageは、同じMEM\_FILEを初期値として持つ別インスタンスである。
-調停後のアドレスが0x1000未満なら入力ROMの値を返し、それ以外ならRAMへ接続する。
-
-
-
-RAMは4,096ワード、計16 KiBである。
-読出しは非同期、書込みはクロックの立上りで行う。
-このメモリ構成をFPGA資源へどう対応させるかは、今回のRTLシミュレーションとは別の検討事項である。
-
-
+入力データをプログラムからロード命令（lw）で読み出せるようにするため、調停器側には命令メモリと同じ初期化ファイル（MEM\_FILE）を持つデータ読み出し用ROM（data\_image）を別インスタンスとして配置した。
+調停後のアクセスアドレスが0x1000未満であれば入力ROMの値を返し、0x1000以上であれば共有RAMへ接続する構成である。
+共有RAM（data\_memory）は4,096ワード（16 KiB）の容量を持ち、読み出しは非同期（組合せ回路）、書き込みはクロックの立ち上がりエッジで同期的に実行される。
 
 \section{メモリ配置とコア識別}\label{sec:2-2}
 
+プログラムが使用するアドレス空間の割り当てを表\ref{tab:2}に示す。
+0x0000〜0x08FFを命令および入力データ用のROM領域とし、0x1000以降を共有RAM上の同期フラグ、ソート対象配列、およびマージ用作業領域として配置している。
+
 \begin{table}[H]
-
 \centering
-
-\caption{プログラムが使うメモリ領域}
-
+\caption{プログラムが使用するメモリ領域}
 \label{tab:2}
-
 \footnotesize
-
 \setlength{\tabcolsep}{3pt}
-
 \renewcommand{\arraystretch}{1.25}
-
 \begin{tabular}{>{\raggedright\arraybackslash}p{\dimexpr0.284412\linewidth-2\tabcolsep\relax}>{\raggedright\arraybackslash}p{\dimexpr0.338490\linewidth-2\tabcolsep\relax}>{\raggedright\arraybackslash}p{\dimexpr0.377098\linewidth-2\tabcolsep\relax}}\toprule
-
-\textbf{アドレス} & \textbf{内容} & \textbf{アクセスする主体}\\\midrule
-
-0x0000〜0x07FF & プログラム & 両コアの命令フェッチ\\
-
-0x0800〜0x08FF & 入力ROM　最大64要素 & Core0がlwで初期コピー\\
-
-0x1000 & READY & Core0が1を書き、Core1が読む\\
-
-0x1004 / 0x1008 & LEFT\_DONE / RIGHT\_DONE & 各担当コアが1を書く\\
-
-0x100C & COMPLETE & Core0が1を書き、Core1が読む\\
-
-0x1100〜0x11FF & 配列　最大64ワード & 分担ソートと結果の書戻し\\
-
+\textbf{アドレス} & \textbf{用途} & \textbf{アクセス主体}\\\midrule
+0x0000〜0x07FF & プログラム領域 & 両コアの命令フェッチ\\
+0x0800〜0x08FF & 入力ROM（最大64要素） & Core0がlwで初期コピー\\
+0x1000 & READYフラグ & Core0が1を書き込み、Core1が参照\\
+0x1004 / 0x1008 & LEFT\_DONE / RIGHT\_DONE & 各担当コアが1を書き込み\\
+0x100C & COMPLETEフラグ & Core0が1を書き込み、Core1が参照\\
+0x1100〜0x11FF & ソート対象配列（最大64ワード） & 分担ソートおよび結果の書き戻し\\
 0x1300〜0x13FF & マージ用作業領域 & Core0\\
-
-0x1FFC / 0x3000 & coreID　値は0または1 & 各CPU内で応答\\
-
+0x1FFC / 0x3000 & coreID（値は0または1） & 各CPU内部で応答\\
 \bottomrule\end{tabular}
-
 \end{table}
 
-0x1000未満の入力ROMをlwで取得できるよう、コード1の選択信号でRAMへのアクセスを抑止する。
-ROM宛てのstoreもRAMへ伝えない。
-読出し値は同じ選択信号でROMまたはRAMから選ぶ。
-
-
+0x1000未満の入力ROM領域に対するデータアクセスを安全に扱うため、調停器にはコード1に示すアドレス判定とRAMアクセス抑止を追加した。
+調停後のアドレスが0x1000未満のときは選択信号（data\_address\_is\_rom）を立て、共有RAMへの読み出し・書き込みをともに無効化する。
+これにより、ROM領域へのストア命令が共有RAMへ誤って反映されることを防ぎつつ、同一の選択信号でROMとRAMの読み出しデータを切り替えている。
 
 \par\medskip\noindent\begin{minipage}{\linewidth}
-\par\medskip\noindent{\small\bfseries コード1　ROMの判定とRAMアクセスの抑止　simple\_memory\_arbiter.v}\par\nopagebreak
-
+\par\medskip\noindent{\small\bfseries コード1　ROM領域の判定とRAMアクセスの抑止（simple\_memory\_arbiter.v）}\par\nopagebreak
 \lstinputlisting{code/code-01.txt}
 \end{minipage}\par\medskip
 
-プログラムは0x1FFCでコアIDを読む。
-コード2では、従来の0x3000と同じCPU内部応答へ接続した。
-両アドレスへのアクセスは共有データ要求を出さず、storeは無視する。
-
-
+各コアが自身の役割を判別するためのコアID読み出しについては、ソートプログラム側が0x1FFCを参照する仕様となっている。
+そこでコード2のとおり、従来の0x3000に加えて0x1FFCでも同じCPU内部応答（CORE\_ID）を返すよう条件を追加した。
+これら両アドレスへのアクセスは共有データポートへの要求（dmem\_req）を抑止してCPU内部で完結させるため、ポート競合を引き起こさず、ストア命令についても無視される。
 
 \par\medskip\noindent\begin{minipage}{\linewidth}
-\par\medskip\noindent{\small\bfseries コード2　コアIDの別名とデータ要求　simple\_cpu\_with\_mem\_interface.v}\par\nopagebreak
-
+\par\medskip\noindent{\small\bfseries コード2　コアIDの互換アドレスとデータ要求抑止（simple\_cpu\_with\_mem\_interface.v）}\par\nopagebreak
 \lstinputlisting{code/code-02.txt}
 \end{minipage}\par\medskip
 
-本文と付録の行番号は参照元の実ファイルに対応する。
-離れた範囲を抜粋した箇所は...で示し、本文コードでは説明用コメントを省略した。
-命令のPCと機械語を含む一覧は付録Aに置く。
-
-
+なお、本報告の本文および付録に掲載するコード抜粋の行番号は、参照元の実ファイルに対応している。
+抜粋にあたり離れた箇所を省略した部分は「...」で示し、本文中の抜粋では説明用コメントを省いた。
+10要素実行プログラムのPCおよび機械語を含む全行一覧は付録\ref{chap:A}に収録する。

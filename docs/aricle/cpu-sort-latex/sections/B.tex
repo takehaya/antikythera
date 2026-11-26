@@ -2,72 +2,38 @@
 
 \chapter{全54条件の検証結果}\label{chap:B}
 
-表の各行に、一つの入力群を3方式で実行したときの総サイクル数を示す。
-18行×3方式の54条件について、既存simulate.logのPASS行と終了コード0を確認した。
-入力の名前は保存済みケース名と一致させた。
-
-
+表\ref{tab:B1}に、18種類の入力ケースを3つの実行方式で評価した計54条件の総サイクル数および合否判定を示す。
+ケース名はシミュレーション実行時の保存名と一致させており、全54条件について実行ログ（simulate.log）のPASS出力および終了コード0を確認している。
 
 \begin{table}[H]
-
 \centering
-
-\caption{18入力群、3方式の全結果}
-
+\caption{全18入力ケース・3方式（計54条件）の検証結果}
 \label{tab:B1}
-
 \footnotesize
-
 \setlength{\tabcolsep}{3pt}
-
 \renewcommand{\arraystretch}{1.25}
-
 \begin{tabular}{>{\raggedright\arraybackslash}p{\dimexpr0.340493\linewidth-2\tabcolsep\relax}>{\raggedright\arraybackslash}p{\dimexpr0.056081\linewidth-2\tabcolsep\relax}>{\raggedright\arraybackslash}p{\dimexpr0.156226\linewidth-2\tabcolsep\relax}>{\raggedright\arraybackslash}p{\dimexpr0.124180\linewidth-2\tabcolsep\relax}>{\raggedright\arraybackslash}p{\dimexpr0.154223\linewidth-2\tabcolsep\relax}>{\raggedright\arraybackslash}p{\dimexpr0.168796\linewidth-2\tabcolsep\relax}}\toprule
-
 \textbf{ケース名} & \textbf{N} & \textbf{serial\_split} & \textbf{dual} & \textbf{serial\_full} & \textbf{判定}\\\midrule
-
 empty & 0 & 49 & 46 & 27 & 全3方式PASS\\
-
 singleton\_zero & 1 & 67 & 64 & 33 & 全3方式PASS\\
-
 singleton\_max & 1 & 67 & 64 & 33 & 全3方式PASS\\
-
 sorted\_two & 2 & 89 & 86 & 51 & 全3方式PASS\\
-
 reverse\_two & 2 & 90 & 87 & 53 & 全3方式PASS\\
-
 duplicate\_three & 3 & 123 & 122 & 74 & 全3方式PASS\\
-
 original\_ten & 10 & 442 & 366 & 441 & 全3方式PASS\\
-
 sorted\_ten & 10 & 399 & 321 & 387 & 全3方式PASS\\
-
 reverse\_ten & 10 & 440 & 342 & 477 & 全3方式PASS\\
-
 duplicate\_ten & 10 & 443 & 367 & 437 & 全3方式PASS\\
-
 equal\_sixteen & 16 & 753 & 558 & 891 & 全3方式PASS\\
-
 uint32\_nine & 9 & 388 & 344 & 364 & 全3方式PASS\\
-
 random\_seven & 7 & 281 & 260 & 230 & 全3方式PASS\\
-
 random\_seventeen & 17 & 923 & 733 & 1,164 & 全3方式PASS\\
-
 random\_thirtytwo & 32 & 2,513 & 1,772 & 3,763 & 全3方式PASS\\
-
 sorted\_sixtyfour & 64 & 7,473 & 4,398 & 12,699 & 全3方式PASS\\
-
 reverse\_sixtyfour & 64 & 9,458 & 5,391 & 16,731 & 全3方式PASS\\
-
 random\_sixtyfour & 64 & 8,614 & 5,527 & 14,803 & 全3方式PASS\\
-
 \bottomrule\end{tabular}
-
 \end{table}
 
-出典はreport/xsim-results.csvと各実行ログである。
-CSVにはサイクル数などの観測値が入り、PASS判定は実行ログと終了記録で確認する。
-波形デモ6件と追加検証4件、期待値不一致の負例は、この54条件には加算していない。
-
-
+上記の数値はreport/xsim-results.csv、合否判定は各実行ログおよび終了記録に基づく。
+なお、\ref{sec:5-1}節で報告した波形デモ6件、単体検証4件、および期待値不一致の異常系テストは、本表の54条件には含めていない。

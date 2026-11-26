@@ -2,31 +2,27 @@
 
 \chapter{10要素の2コア実行プログラム}\label{chap:A}
 
-research/cases/original\_ten/dual/listing.sの実ファイルを行番号付きで掲載する。
-右側の注記は命令のPCと機械語である。
-この一覧を使うと、図\ref{fig:4}のPCがどの命令を指すか分かる。
-長いコメントは紙面内で折り返す。
+本付録では、第\ref{chap:4}章で検証対象とした10要素2コア実行プログラム（research/cases/original\_ten/dual/listing.s）の全文を行番号付きで掲載する。
+各命令の右側に付した注記は、その命令のPCアドレスおよび32ビット機械語である。
+この一覧を参照することで、図\ref{fig:4}の波形上に現れるPC値がアセンブリ上のどの命令に対応するかを直接照合できる。
+なお、紙面幅を超える長いコメントは自動的に折り返して表示している。
 
-
-
-\par\medskip\noindent{\small\bfseries コードA1　起動、分担、完了待機（1〜45行）}\par\nopagebreak
-
+\par\medskip\noindent{\small\bfseries コードA1　起動処理、役割分担、および完了待機（1〜45行）}\par\nopagebreak
 \lstinputlisting{code/code-10.txt}
 
 \section*{コピー処理とバブルソート}
 
-\par\medskip\noindent{\small\bfseries コードA2　コピー、比較交換、マージの入口（46〜89行）}\par\nopagebreak
+コードA2に、配列コピーサブルーチン（copy\_words）、バブルソート本体（bubble\_sort）、およびマージ処理（merge\_halves）の入口を示す。
+70〜75行の隣接要素比較および交換処理は両コアで共通に実行される。
+本実装では走査範囲を1要素ずつ縮小する固定パスを採用しており、パス内で交換が発生しなかった場合の早期終了最適化は行っていない。
 
+\par\medskip\noindent{\small\bfseries コードA2　コピー処理、比較交換、およびマージ入口（46〜89行）}\par\nopagebreak
 \lstinputlisting{code/code-11.txt}
-
-70〜75行の比較交換は両コアで共通である。
-走査範囲を1要素ずつ縮める固定パスを使い、交換がなかったことによる早期終了は行わない。
-
-
 
 \clearpage
 \section*{マージ処理と入力データ}
 
-\par\medskip\noindent{\small\bfseries コードA3　マージ、書き戻し、入力ROM（90行〜末尾）}\par\nopagebreak
+コードA3に、2つの整列済み区間を作業領域へ統合するマージループ、残り要素の転送処理、配列領域への書き戻し、および0x0800番地に配置した10要素の入力ROMデータを示す。
 
+\par\medskip\noindent{\small\bfseries コードA3　マージ処理、書き戻し、および入力ROM（90行〜末尾）}\par\nopagebreak
 \lstinputlisting{code/code-12.txt}

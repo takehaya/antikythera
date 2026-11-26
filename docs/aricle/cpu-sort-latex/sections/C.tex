@@ -1,38 +1,29 @@
 \chapter{途中状態と終了時の検査コード}\label{chap:C}
 
-\section{書込み領域と完了通知の検査}
+本付録では、\ref{sec:3-3}節で述べた実行途中の動的検査および終了時の最終配列照合を実装したテストベンチ（tests/sort/tb\_sort.v）の主要部分を抜粋して示す。
 
-以下はtests/sort/tb\_sort.vの抜粋である。
+\section{書き込み領域と完了通知の検査}\label{sec:C-1}
 
-storeが受理されるたびにcheck\_writeを呼び出す。
-Core1の配列書込み回数と、自分の完了通知回数も数える。
-担当外書込みと早すぎるマージの検出は最終配列の比較とは別に行う。
+コードC1に示すとおり、テストベンチはストア命令が受理されるたびにcheck\_writeタスクを呼び出し、アドレスの正当性、担当区間外への書き込み、READY成立前の書き込み、および両側完了前のマージ開始を検査する。
+あわせて、Core1による配列領域への受理書き込み回数およびRIGHT\_DONE通知回数を計数することで、最終配列の一致とは独立に並列分担の正当性を検証している。
 
-
-
-\par\medskip\noindent{\small\bfseries コードC1　書込み領域の検査とCore1の受理書込み（tb\_sort.v）}\par\nopagebreak
-
+\par\medskip\noindent{\small\bfseries コードC1　書き込み領域の検査とCore1受理書き込みの計数（tb\_sort.v）}\par\nopagebreak
 \lstinputlisting{code/code-13.txt}
 
 \clearpage
-\section{ストール時のPC・レジスタ保持の検査}
+\section{ストール時のPC・レジスタ保持の検査}\label{sec:C-2}
 
-\par\medskip\noindent{\small\bfseries コードC2　状態保持の検査（tb\_sort.v）}\par\nopagebreak
+共有ポート競合時の状態保持を確認するため、テストベンチはクロックエッジの直前に各コアのPC、全32レジスタを連結したall\_regs、およびストール信号を保存し、クロックエッジ後に再比較する（コードC2）。
+これにより、図\ref{fig:4}の波形上で視認できるPCだけでなく、レジスタファイル全体の意図しない書き換えも漏れなく検出できる。
 
+\par\medskip\noindent{\small\bfseries コードC2　ストール前後の状態保持検査（tb\_sort.v）}\par\nopagebreak
 \lstinputlisting{code/code-14.txt}
 
-全32レジスタを連結したall\_regsとPCをクロック端の前後で比較する。
-ストール前後の一致を検査するため、図\ref{fig:4}で見えているPC以外の状態更新も検出対象になる。
+\section{完了通知と最終配列の照合}\label{sec:C-3}
 
+両コアが終端ループへ到達した後は、コードC3によってプロトコル上の全完了フラグが成立していること、各コアが自身の完了通知をちょうど1回ずつ行ったこと、および配列領域の64ワードが期待値と一致することを確認する。
+加えて、188〜196行では配列領域の下端（0x10FC）および上端（0x1200）、作業領域の下端（0x12FC）、使用した作業領域直後の各ガードワードが0のままであることも検査している。
+なお、入力コピー直後のスナップショット取得と図\ref{fig:5}の表示用フラグは、波形観測用のtb\_vivado\_sort.vにおいて追加実装したものである。
 
-
-\section{完了通知と最終配列の照合}
-
-\par\medskip\noindent{\small\bfseries コードC3　終了条件と64ワードの照合（tb\_sort.v）}\par\nopagebreak
-
+\par\medskip\noindent{\small\bfseries コードC3　終了条件の確認と最終配列64ワードの照合（tb\_sort.v）}\par\nopagebreak
 \lstinputlisting{code/code-15.txt}
-
-188〜196行では配列下端0x10FC、上端0x1200、作業領域下端0x12FC、使用した作業領域直後のガードが0のままであることも確認する。
-初期入力のスナップショットと図\ref{fig:5}の表示用フラグは、波形用のtb\_vivado\_sort.vが追加している。
-
-
