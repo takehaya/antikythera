@@ -12,7 +12,7 @@
 \begin{figure}[H]
 \centering
 \input{figures/synchronization.tex}
-\caption{開始通知、担当区間のソート、完了通知、およびマージの実行順序。各フラグの1への更新は対応する処理の担当コアが行う。}\label{fig:2}
+\caption[分割ソートの実行順序]{開始通知、担当区間のソート、完了通知、およびマージの実行順序。各フラグの1への更新は対応する処理の担当コアが行う。}\label{fig:2}
 \end{figure}
 
 コード3に、Core0における入力コピーから前半ソート呼び出しまでのアセンブリ抜粋を示す。
@@ -52,7 +52,7 @@ Core0はRIGHT\_DONEの成立を確認してからマージと結果の書き戻�
 \includegraphics[bb=0 0 2758 785,viewport=0 403 410 785,clip,width=.261\linewidth]{figures/02-synchronization-wave.png}%
 \hspace{.005\linewidth}\includegraphics[bb=0 0 2758 785,viewport=555 403 675 785,clip,width=.076\linewidth]{figures/02-synchronization-wave.png}%
 \hspace{.005\linewidth}\includegraphics[bb=0 0 2758 785,viewport=1750 403 2758 785,clip,width=.643\linewidth]{figures/02-synchronization-wave.png}\par\medskip
-\caption{10要素dual実行における同期フラグの推移。上下は同一実行の前半と後半であり、視認性のため信号名列を再掲している。Value列は最終カーソル時点の値を示し、横軸（ns）とリセット解除基準のcyclesは原点が異なる。}\label{fig:3}
+\caption[同期フラグの推移]{10要素dual実行における同期フラグの推移。上下は同一実行の前半と後半であり、視認性のため信号名列を再掲している。Value列は最終カーソル時点の値を示し、横軸（ns）とリセット解除基準のcyclesは原点が異なる。}\label{fig:3}
 \end{figure}
 
 \begin{table}[H]
@@ -99,7 +99,7 @@ CPU内部ではレジスタ書き込みイネーブル（RegWrite）を!stallで
 \begin{figure}[H]
 \centering
 \includegraphics[bb=0 0 2758 382,viewport=0 0 1950 382,clip,width=\linewidth]{figures/03-contention-wave.png}
-\caption{1085.4 ns付近における共有ポート競合時の波形。req0、req1、およびstall1が同時に1となり、PC0は0xC8、PC1は0xD4を示す。Core1のPCは競合区間をまたいで0xD4に保持され、ストール解除後に0xD8へ遷移する。}\label{fig:4}
+\caption[共有データポート競合時の波形]{1085.4 ns付近における共有ポート競合時の波形。req0、req1、およびstall1が同時に1となり、PC0は0xC8、PC1は0xD4を示す。Core1のPCは競合区間をまたいで0xD4に保持され、ストール解除後に0xD8へ遷移する。}\label{fig:4}
 \end{figure}
 
 付録\ref{chap:A}のPC注記と照合すると、PC0の0xC8はコード6の71行目のロード命令、PC1の0xD4は74行目の最初のストア命令に対応する。
@@ -133,7 +133,7 @@ CPU内部ではレジスタ書き込みイネーブル（RegWrite）を!stallで
 \end{minipage}\hfill\begin{minipage}{.51\linewidth}
 \small\raggedright \textbf{入力配列}\par 7, 1, 4, 9, 3, 8, 2, 6, 5, 0\par \medskip \textbf{出力配列}\par 0, 1, 2, 3, 4, 5, 6, 7, 8, 9\par \medskip Core1による配列への受理ストアは16回、RIGHT\_DONE通知は1回であった。
 \end{minipage}
-\caption{終了時の最終スナップショット。final\_00〜final\_09は0〜9、cyclesは366を示す。initial\_validは入力コピー照合完了、final\_validは最終値取得完了、passedは全検査通過を表す。}\label{fig:5}
+\caption[ソート終了時の配列と検証結果]{終了時の最終スナップショット。final\_00〜final\_09は0〜9、cyclesは366を示す。initial\_validは入力コピー照合完了、final\_validは最終値取得完了、passedは全検査通過を表す。}\label{fig:5}
 \end{figure}
 
 \par\medskip\noindent\begin{minipage}{\linewidth}

@@ -70,8 +70,12 @@ All evaluations are limited to RTL behavioral simulation; logic synthesis and ph
 
 \clearpage\setcounter{page}{0}\pagenumbering{roman}\pagestyle{plain}\hypersetup{pageanchor=true}
 \tableofcontents
+% 図・表の一覧では、章区切りで挿入される余白を表示しない。
+\begingroup
+\renewcommand{\addvspace}[1]{}
 \listoffigures
 \listoftables
+\endgroup
 \clearpage\setcounter{page}{0}\pagenumbering{arabic}
 \input{sections/1.tex}
 \input{sections/2.tex}

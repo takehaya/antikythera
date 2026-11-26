@@ -1,7 +1,6 @@
 \chapter{結論と限界}\label{chap:7}
 
 本章では、本報告における設計統合と検証から得られた知見を総括し、現在の検証範囲および未検証事項を整理する。
-最後に、再現性を確保するための検証対象バージョンと根拠資料の対応を示す。
 
 \section{検証で得られた知見}\label{sec:7-1}
 
@@ -20,29 +19,3 @@
 
 また、本報告の性能評価はすべてRTLビヘイビアシミュレーション上のサイクル数に基づくものであり、論理合成、配置配線、およびFPGA実機での動作測定は行っていない。
 実機における処理時間の短縮率はサイクル数の比だけでなく最大動作周波数にも依存するため、非同期読み出しメモリのFPGA資源への実装方法、回路規模、およびタイミング制約を含めた実機評価が別途必要である。
-
-\section{検証対象の版と根拠資料}\label{sec:7-3}
-
-本報告の検証対象は、原本リポジトリtakehaya/antikytheraの未コミット変更を含む作業状態（HEAD:\ \allowbreak 8b61da20522f5bfcb01908f2342abfea7676bb25）を出発点とし、第\ref{chap:2}章の統合変更を加えた版である。
-そのため、HEADコミット単体からは同一の検証環境を再現できない。
-参照した全19ファイルの一覧とSHA-256ハッシュ値はsource-manifest.jsonに記録しており、ファイル集合識別子の先頭16桁は62eb51779b0c0173である。
-
-表\ref{tab:8}に本文の記述と保存資料の対応をまとめる。
-原本リポジトリは文献\cite{antikythera}に、Vivadoシミュレーションおよび波形操作の参照資料は文献\cite{ug900,ug835}に示す。
-なお、参照した公式マニュアルは2020.2版であり、本報告の実測に用いた実行環境（XSim 2023.1）とは版が異なる。
-
-\begin{table}[H]
-\centering
-\caption{本文の根拠と保存資料の対応}
-\label{tab:8}
-\footnotesize
-\setlength{\tabcolsep}{3pt}
-\renewcommand{\arraystretch}{1.25}
-\begin{tabular}{>{\raggedright\arraybackslash}p{\dimexpr0.340493\linewidth-2\tabcolsep\relax}>{\raggedright\arraybackslash}p{\dimexpr0.659507\linewidth-2\tabcolsep\relax}}\toprule
-\textbf{根拠項目} & \textbf{保存資料}\\\midrule
-実装と命令一覧 & work/内のRTL、tests/sort/build\_programs.py、research/cases/original\_ten/dual/listing.s\\
-54条件の数値・判定 & report/xsim-results.csv、runs/matrix-*/simulate.logおよび終了記録\\
-図\ref{fig:3}〜\ref{fig:5}の波形画面 & runs/ten-dual-v2/evidence.wdb、report/gui-captures-20261011/内の原本と切出し記録\\
-途中状態の検査コード & tests/sort/tb\_sort.v、research/sim/tb\_vivado\_sort.v\\
-\bottomrule\end{tabular}
-\end{table}
