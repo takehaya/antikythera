@@ -7,6 +7,15 @@
 この一覧を参照することで、図\ref{fig:4}の波形上に現れるPC値がアセンブリ上のどの命令に対応するかを直接照合できる。
 なお、紙面幅を超える長いコメントは自動的に折り返して表示している。
 
+図\ref{fig:appendix-sort-flow}に、コードA1の分岐から終端までの流れを示す。
+Core 0とCore 1は同じバブルソート処理（コードA2）を前半5要素と後半5要素に対してそれぞれ呼び出し、マージ処理（コードA2・A3）はCore 0だけが実行する。
+
+\begin{figure}[H]
+\centering
+\input{figures/appendix-sort-flow.tex}
+\caption{10要素ソートのプログラムフロー}\label{fig:appendix-sort-flow}
+\end{figure}
+
 \par\medskip\noindent{\small\bfseries コードA1　起動処理、役割分担、および完了待機（1〜45行）}\par\nopagebreak
 \lstinputlisting{code/code-10.txt}
 

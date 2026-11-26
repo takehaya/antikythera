@@ -1,0 +1,30 @@
+% プログラム全体の分岐とサブルーチン呼び出しを、命令アドレスで対応付ける。
+\begin{tikzpicture}[
+  x=1cm,y=1cm,>=stealth,
+  flowbox/.style={draw=black!55,rounded corners=2pt,fill=black!3,
+    align=center,text width=56mm,minimum height=9mm,inner sep=2pt, font=\small},
+  flowterminal/.style={flowbox,text width=78mm,fill=black!10},
+  flow/.style={->,semithick}
+]
+\node[flowterminal] (entry) at (0,0) {コアIDを読み、役割を分岐（\texttt{0x0000--0x0004}）};
+\node[flowbox] (init) at (-3.15,-1.45) {入力をコピーしてREADYを通知\\{\scriptsize\ttfamily 0x0008--0x002C}};
+\node[flowbox] (ready) at (3.15,-1.45) {READYを待つ\\{\scriptsize\ttfamily 0x005C--0x0060}};
+\node[flowbox] (left) at (-3.15,-2.55) {前半を整列・LEFT\_DONE\\{\scriptsize\ttfamily 0x0030--0x0040}};
+\node[flowbox] (right) at (3.15,-2.55) {後半を整列・RIGHT\_DONE\\{\scriptsize\ttfamily 0x0064--0x0074}};
+\node[flowbox] (wait) at (-3.15,-3.65) {RIGHT\_DONEを待つ\\{\scriptsize\ttfamily 0x0044--0x0048}};
+\node[flowbox] (done) at (3.15,-3.65) {COMPLETEを待つ\\{\scriptsize\ttfamily 0x0078--0x007C}};
+\node[flowbox] (merge) at (-3.15,-4.75) {マージして結果を書き戻す\\{\scriptsize\ttfamily 0x004C}でマージ処理を呼ぶ};
+\node[flowbox] (publish) at (-3.15,-5.85) {COMPLETEを通知\\{\scriptsize\ttfamily 0x0050--0x0054}};
+\node[flowterminal] (halt) at (0,-7.0) {両コアとも終端ループ（\texttt{0x0084}）};
+
+\draw[flow] (entry.south) -- ++(0,-.25) -| node[pos=.42,above,font=\small] {Core 0} (init.north);
+\draw[flow] (entry.south) -- ++(0,-.25) -| node[pos=.42,above,font=\small] {Core 1} (ready.north);
+\draw[flow] (init) -- (left);
+\draw[flow] (left) -- (wait);
+\draw[flow] (wait) -- (merge);
+\draw[flow] (merge) -- (publish);
+\draw[flow] (ready) -- (right);
+\draw[flow] (right) -- (done);
+\draw[flow] (publish.south) -- (publish.south |- halt.north);
+\draw[flow] (done.south) -- (done.south |- halt.north);
+\end{tikzpicture}
