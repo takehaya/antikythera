@@ -9,16 +9,22 @@ module tb_MultiCoreCPU;
     reg clk;
     reg reset;
     
-    // デバッグ出力
-    wire [31:0] debug_regs_core0 [3:0];
-    wire [31:0] debug_regs_core1 [3:0];
+    // デバッグ出力（フラット化されたポートに対応）
+    wire [31:0] debug_regs_core0_0, debug_regs_core0_1, debug_regs_core0_2, debug_regs_core0_3;
+    wire [31:0] debug_regs_core1_0, debug_regs_core1_1, debug_regs_core1_2, debug_regs_core1_3;
 
     // テスト対象のインスタンス化
     MultiCoreCPU uut (
         .clk(clk),
         .reset(reset),
-        .debug_regs_core0(debug_regs_core0),
-        .debug_regs_core1(debug_regs_core1)
+        .debug_regs_core0_0(debug_regs_core0_0),
+        .debug_regs_core0_1(debug_regs_core0_1),
+        .debug_regs_core0_2(debug_regs_core0_2),
+        .debug_regs_core0_3(debug_regs_core0_3),
+        .debug_regs_core1_0(debug_regs_core1_0),
+        .debug_regs_core1_1(debug_regs_core1_1),
+        .debug_regs_core1_2(debug_regs_core1_2),
+        .debug_regs_core1_3(debug_regs_core1_3)
     );
 
     // クロック生成
@@ -61,12 +67,12 @@ module tb_MultiCoreCPU;
                 
                 if (!reset) begin
                     $display("Time: %0t", $time);
-                    $display("  Core 0: t0=%h t1=%h t2=%h t3=%h", 
-                             debug_regs_core0[0], debug_regs_core0[1], 
-                             debug_regs_core0[2], debug_regs_core0[3]);
-                    $display("  Core 1: t0=%h t1=%h t2=%h t3=%h", 
-                             debug_regs_core1[0], debug_regs_core1[1], 
-                             debug_regs_core1[2], debug_regs_core1[3]);
+                    $display("  Core 0: t0=%h t1=%h t2=%h t3=%h",
+                             debug_regs_core0_0, debug_regs_core0_1,
+                             debug_regs_core0_2, debug_regs_core0_3);
+                    $display("  Core 1: t0=%h t1=%h t2=%h t3=%h",
+                             debug_regs_core1_0, debug_regs_core1_1,
+                             debug_regs_core1_2, debug_regs_core1_3);
                     $display("  ---");
                 end
                 

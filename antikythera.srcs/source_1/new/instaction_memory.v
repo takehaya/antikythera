@@ -2,15 +2,20 @@
 module InstructionMemory #(
     parameter MEM_FILE = "memfile_I.dat"  // デフォルトファイル名
 )(
-    input  [31:0] PC,
-    output [31:0] Instruction
+    // デュアルポート: 各コアが独立して命令フェッチ可能
+    input  [31:0] PC0,
+    output [31:0] Instruction0,
+    input  [31:0] PC1,
+    output [31:0] Instruction1
 );
     reg [31:0] mem [0:1023];
-    wire [9:0] wordAddr = PC[11:2]; // 4byte aligned
-    assign Instruction = mem[wordAddr];
+    integer i;  // 無名ブロック内宣言はVerilog-2001/Vivadoで不可のためモジュール直下で宣言
+    wire [9:0] wordAddr0 = PC0[11:2]; // 4byte aligned
+    wire [9:0] wordAddr1 = PC1[11:2];
+    assign Instruction0 = mem[wordAddr0];
+    assign Instruction1 = mem[wordAddr1];
     initial begin
         // まず全体を0で初期化
-        integer i;
         for (i = 0; i < 1024; i = i + 1) begin
             mem[i] = 32'h00000000;
         end

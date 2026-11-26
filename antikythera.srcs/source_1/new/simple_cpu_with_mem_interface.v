@@ -3,7 +3,9 @@
 // メモリ境界の定義
 `define INST_MEM_BOUNDARY 32'h1000  // 命令メモリ: 0x0000-0x0FFF, データメモリ: 0x1000+
 
-module SimpleCPUWithMemInterface(
+module SimpleCPUWithMemInterface #(
+    parameter CORE_ID = 0  // コア識別番号（lw 0x3000 で読める）
+)(
     input clk,
     input reset,
     input stall,  // メモリ調停器からのストール信号
@@ -143,9 +145,12 @@ module SimpleCPUWithMemInterface(
         .Zero(ZeroFlag)
     );
 
-    // データメモリアクセス
+    // CORE_IDアドレスの検出: lw 0x3000 でコア番号を返す
+    wire is_core_id_read = MemRead && (ALUResult == 32'h00003000);
+
+    // データメモリアクセス（CORE_ID読み取り時はアービタにリクエストを出さない）
     always @(*) begin
-        if (MemRead || MemWrite) begin
+        if ((MemRead || MemWrite) && !is_core_id_read) begin
             dmem_req = 1'b1;
             dmem_write = MemWrite;
             dmem_addr = ALUResult;
@@ -158,9 +163,8 @@ module SimpleCPUWithMemInterface(
         end
     end
 
-    // 統合メモリアクセス: lw命令で命令メモリもアクセス可能にする
-    // (この機能は簡略化のため省略、必要に応じて追加)
-    wire [31:0] unifiedMemReadData = dmem_read_data;
+    // CORE_ID読み取り時はCORE_IDを返し、それ以外はデータメモリの値を返す
+    wire [31:0] unifiedMemReadData = is_core_id_read ? CORE_ID : dmem_read_data;
 
     // 書き込みデータのMUX
     assign WriteData = Link ? PCplus4 :
