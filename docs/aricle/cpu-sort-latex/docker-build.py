@@ -13,6 +13,7 @@ args=['docker','run','--rm','--name','cpu-report-tex-compile',
       '--read-only','--tmpfs','/tmp:rw,nosuid,size=256m',
       '--user',f'{os.getuid()}:{os.getgid()}',
       '--mount',f'type=bind,src={B},dst=/work',
-      '--workdir','/work','--env','HOME=/tmp',image]
+      # POSIX TZ specifies UTC+09:00 without depending on tzdata in the image.
+      '--workdir','/work','--env','HOME=/tmp','--env','TZ=JST-9',image]
 command=sys.argv[1:] or ['python3','build.py']
 raise SystemExit(subprocess.run(args+command).returncode)
